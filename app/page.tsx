@@ -75,7 +75,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Articles Section */}
+        {/* Articles Section - Job Search Insights */}
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-gray-900 text-center mb-3">
             Job Search Insights
