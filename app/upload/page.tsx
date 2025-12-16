@@ -499,51 +499,72 @@ export default function UploadPage() {
         {/* Results Section */}
         {result && (
           <div className="mt-12 space-y-8">
-            {/* Section 1: CV Summary */}
-            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-              <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  CV Summary
+            {/* What We Understood From Your CV */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="px-6 py-5 border-b border-gray-100">
+                <h2 className="text-lg font-semibold text-gray-800">
+                  What we understood from your CV
                 </h2>
               </div>
               <div className="p-6 space-y-5">
-                {/* Name & Title */}
+                {/* Name */}
                 {result.cvProfile.name && (
                   <div>
-                    <h3 className="text-2xl font-bold text-gray-900">
+                    <h3 className="text-2xl font-semibold text-gray-900 tracking-tight">
                       {result.cvProfile.name}
                     </h3>
                   </div>
                 )}
                 
                 {/* Title and Seniority */}
-                <div className="flex flex-wrap items-center gap-2 text-gray-600">
+                <div className="flex flex-wrap items-center gap-2 text-base">
                   <span className="font-medium text-gray-900">{result.cvProfile.title}</span>
-                  <span className="text-gray-400">•</span>
-                  <span>{result.cvProfile.seniority_level}</span>
-                  <span className="text-gray-400">•</span>
-                  <span>{result.cvProfile.locations.join(' • ')}</span>
+                  <span className="text-gray-300">•</span>
+                  <span className="text-gray-600">{result.cvProfile.seniority_level}</span>
                 </div>
 
                 {/* Summary Paragraph */}
-                <p className="text-gray-700 leading-relaxed">
-                  {result.cvProfile.summary}
-                </p>
+                <div className="pt-2">
+                  <p className="text-gray-700 leading-relaxed text-[15px]">
+                    {result.cvProfile.summary}
+                  </p>
+                </div>
 
                 {/* Skills Pills */}
-                <div className="pt-4 border-t border-gray-200">
-                  <p className="text-sm font-medium text-gray-700 mb-3">Core Skills</p>
+                <div className="pt-5 border-t border-gray-100">
+                  <p className="text-sm font-medium text-gray-600 mb-3 uppercase tracking-wide">Skills</p>
                   <div className="flex flex-wrap gap-2">
                     {result.cvProfile.core_skills.map((skill, idx) => (
                       <span
                         key={idx}
-                        className="inline-flex items-center px-3 py-1 bg-blue-50 text-blue-700 text-sm font-medium rounded-full border border-blue-100"
+                        className="inline-flex items-center px-3 py-1.5 bg-gray-50 text-gray-700 text-sm font-medium rounded-md border border-gray-200"
                       >
                         {skill}
                       </span>
                     ))}
                   </div>
                 </div>
+
+                {/* Preferred Locations */}
+                {result.cvProfile.locations && result.cvProfile.locations.length > 0 && (
+                  <div className="pt-5 border-t border-gray-100">
+                    <p className="text-sm font-medium text-gray-600 mb-3 uppercase tracking-wide">Preferred Locations</p>
+                    <div className="flex flex-wrap gap-2">
+                      {result.cvProfile.locations.map((location, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-700 text-sm rounded-md border border-gray-200"
+                        >
+                          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          {location}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
