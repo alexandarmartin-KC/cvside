@@ -59,19 +59,16 @@ export default function ArticlePage({ params }: { params: { slug: string } }) {
           <div className="mt-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl shadow-xl p-8 text-white">
             <div className="text-center">
               <h2 className="text-2xl font-bold mb-3">
-                Ready to optimize your CV?
+                Ready to find your next job?
               </h2>
               <p className="text-blue-50 mb-6 text-lg">
-                Upload your CV and get AI-powered job matches in seconds
+                Upload your CV and get AI-powered job matches in seconds.
               </p>
               <Link
                 href="/upload"
                 className="inline-flex items-center px-8 py-4 bg-white text-blue-600 font-semibold rounded-lg shadow-lg hover:bg-gray-50 transform hover:-translate-y-0.5 transition-all"
               >
-                Try it with your CV
-                <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
+                Upload your CV now →
               </Link>
             </div>
           </div>
