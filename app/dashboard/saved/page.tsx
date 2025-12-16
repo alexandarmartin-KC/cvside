@@ -24,6 +24,20 @@ export default async function SavedJobsPage() {
     },
   });
 
+  // Fetch applied jobs to show status
+  const appliedJobs = await prisma.appliedJob.findMany({
+    where: { userId },
+    select: {
+      jobId: true,
+      appliedAt: true,
+    },
+  });
+
+  // Create a map for quick lookup
+  const appliedJobsMap = new Map(
+    appliedJobs.map(aj => [aj.jobId, aj.appliedAt])
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -39,12 +53,14 @@ export default async function SavedJobsPage() {
         <div className="grid gap-6">
           {savedJobs.map((saved) => {
             const match = saved.job.jobMatches[0];
+            const appliedAt = appliedJobsMap.get(saved.job.id);
             return (
               <JobCard
                 key={saved.id}
                 job={saved.job}
                 score={match?.score}
                 reasons={match?.reasons}
+                appliedAt={appliedAt}
                 actions={
                   <>
                     <MoveToAppliedButton savedJobId={saved.id} jobId={saved.job.id} />

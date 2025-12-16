@@ -12,10 +12,19 @@ type JobCardProps = {
   score?: number;
   reasons?: string[];
   isNew?: boolean;
+  appliedAt?: Date;
   actions?: React.ReactNode;
 };
 
-export function JobCard({ job, score, reasons, isNew, actions }: JobCardProps) {
+export function JobCard({ job, score, reasons, isNew, appliedAt, actions }: JobCardProps) {
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat('da-DK', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    }).format(new Date(date));
+  };
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all p-6">
       <div className="flex items-start justify-between gap-4 mb-3">
@@ -28,6 +37,11 @@ export function JobCard({ job, score, reasons, isNew, actions }: JobCardProps) {
               </span>
             )}
           </div>
+          {appliedAt && (
+            <div className="text-xs text-green-600 font-medium mb-1">
+              ✓ Applied {formatDate(appliedAt)}
+            </div>
+          )}
           <p className="text-gray-600 text-sm mb-2">{job.company}</p>
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <span className="flex items-center gap-1 text-gray-500">
