@@ -3,14 +3,18 @@ import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { job, match } = await req.json();
-
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { job, match } = await req.json();
+
+    if (!job?.id) {
+      return NextResponse.json({ error: 'Job ID is required' }, { status: 400 });
+    }
+
     // Create or find the job in the database
     const dbJob = await prisma.job.upsert({
       where: { 
@@ -83,6 +87,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error saving job:', error);
-    return NextResponse.json({ error: 'Failed to save job' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ 
+      error: 'Failed to save job', 
+      details: errorMessage,
+      type: error instanceof Error ? error.constructor.name : typeof error
+    }, { status: 500 });
   }
 }

@@ -459,7 +459,8 @@ export default function UploadPage() {
         return newSet;
       });
       console.error('Failed to save job:', error);
-      alert('Failed to save job. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save job';
+      alert(`Failed to save job: ${errorMessage}\n\nCheck console for details.`);
     }
   };
 
