@@ -96,8 +96,33 @@ export default function UploadPage() {
 
       setIsDirty(false);
       setUpdatedAt(null);
+
+      // Load saved jobs if user is authenticated
+      if (sessionStatus === 'authenticated') {
+        loadSavedJobs();
+      }
     }
-  }, [result]);
+  }, [result, sessionStatus]);
+
+  // Load saved jobs from database
+  const loadSavedJobs = async () => {
+    try {
+      const response = await fetch('/api/upload/jobs/saved');
+      if (response.ok) {
+        const data = await response.json();
+        // Extract job IDs from mock job IDs (mock-1 -> 1)
+        const jobIds = data.savedJobIds
+          .map((id: string) => {
+            const match = id.match(/^mock-(\d+)$/);
+            return match ? parseInt(match[1]) : null;
+          })
+          .filter((id: number | null): id is number => id !== null);
+        setSavedJobIds(new Set(jobIds));
+      }
+    } catch (error) {
+      console.error('Failed to load saved jobs:', error);
+    }
+  };
 
   // Check if draft differs from applied
   useEffect(() => {
@@ -374,6 +399,8 @@ export default function UploadPage() {
       return;
     }
 
+    const wasSaved = savedJobIds.has(jobId);
+
     // Optimistic update
     setSavedJobIds(prev => {
       const newSet = new Set(prev);
@@ -386,20 +413,48 @@ export default function UploadPage() {
     });
 
     try {
-      // TODO: Call API to save/unsave job
-      // const response = await fetch('/api/jobs/save', {
-      //   method: 'POST',
-      //   body: JSON.stringify({ jobId, action: newSet.has(jobId) ? 'save' : 'unsave' })
-      // });
-      // if (!response.ok) throw new Error('Failed to save job');
+      // Get job details from result
+      const job = result?.jobs.find(j => j.id === jobId);
+      const match = result?.matches.find(m => m.jobId === jobId);
+      
+      if (!job) throw new Error('Job not found');
+
+      // Call API to save/unsave job
+      const endpoint = wasSaved 
+        ? '/api/upload/jobs/unsave'
+        : '/api/upload/jobs/save';
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          job: {
+            id: job.id,
+            title: job.title,
+            company: job.company,
+            location: job.location,
+            description: job.description,
+            skills: job.skills,
+          },
+          match: match ? {
+            score: match.score,
+            reasons: match.reasons,
+          } : undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save job');
+      }
     } catch (error) {
       // Rollback on error
       setSavedJobIds(prev => {
         const newSet = new Set(prev);
-        if (newSet.has(jobId)) {
-          newSet.delete(jobId);
-        } else {
+        if (wasSaved) {
           newSet.add(jobId);
+        } else {
+          newSet.delete(jobId);
         }
         return newSet;
       });
