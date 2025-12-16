@@ -3,7 +3,13 @@ import { articles } from '@/lib/articles';
 import { auth } from '@/lib/auth';
 
 export default async function Home() {
-  const session = await auth();
+  let session = null;
+  try {
+    session = await auth();
+  } catch (error) {
+    console.error('Auth error on homepage:', error);
+    // Continue without session
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-16 px-4">
