@@ -478,10 +478,10 @@ export default function UploadPage() {
                     </div>
                   </div>
                   <button
-                    onClick={handleRemoveFile}
-                    className="ml-4 text-sm font-medium text-red-600 hover:text-red-800 focus:outline-none focus:underline"
+                    onClick={handleDropzoneClick}
+                    className="ml-4 text-sm font-medium text-blue-600 hover:text-blue-800 focus:outline-none focus:underline"
                   >
-                    Remove
+                    Upload new
                   </button>
                 </div>
               </div>
