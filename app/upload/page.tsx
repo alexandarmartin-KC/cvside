@@ -215,16 +215,21 @@ export default function UploadPage() {
 
   // Save CV profile to database
   const saveCvProfile = async () => {
-    if (!session) return;
+    if (!session || !result) return;
 
     try {
       const response = await fetch('/api/cv/save-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          name: result.cvProfile.name,
+          title: result.cvProfile.title,
+          seniority: result.cvProfile.seniority_level,
+          summary: result.cvProfile.summary,
           skills: manualSkills,
           locations: manualLocations,
           preferredLocation,
+          cvFileName: file?.name || 'CV.pdf',
         }),
       });
 

@@ -12,7 +12,16 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { skills, locations, preferredLocation } = body;
+    const { 
+      name, 
+      title, 
+      seniority, 
+      summary, 
+      skills, 
+      locations, 
+      preferredLocation,
+      cvFileName 
+    } = body;
 
     // Validate input
     if (!Array.isArray(skills) || !Array.isArray(locations)) {
@@ -22,19 +31,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Upsert CV profile
+    // Upsert CV profile with all extracted data
     await prisma.cvProfile.upsert({
       where: { userId: session.user.id },
       create: {
         userId: session.user.id,
+        name,
+        title,
+        seniority,
+        summary,
         skills,
         locations,
         preferredLocation: preferredLocation || (locations.length > 0 ? locations[0] : null),
+        cvFileName,
+        cvUploadedAt: new Date(),
+        workPreference: 'ANY', // Default
       },
       update: {
+        name,
+        title,
+        seniority,
+        summary,
         skills,
         locations,
         preferredLocation: preferredLocation || (locations.length > 0 ? locations[0] : null),
+        cvFileName,
+        cvUploadedAt: new Date(),
         updatedAt: new Date(),
       },
     });

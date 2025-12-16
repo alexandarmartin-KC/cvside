@@ -65,8 +65,11 @@ export function ProfileForm({ profile }: { profile: CvProfile }) {
       {/* Card 1: Standard Information */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-1">Standard Information</h2>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-gray-500 mb-2">
           These details are used as your base profile for job matching.
+        </p>
+        <p className="text-sm text-blue-600 mb-6">
+          These fields were extracted from your CV. You can edit them if needed.
         </p>
 
         <div className="space-y-4">
@@ -166,7 +169,7 @@ export function ProfileForm({ profile }: { profile: CvProfile }) {
           Replace CV
         </Link>
         <p className="text-xs text-gray-500 mt-2">
-          Uploading a new CV will update your base profile.
+          Uploading a new CV will replace your base profile and update job matches.
         </p>
       </div>
 
