@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -33,6 +33,138 @@ export default function UploadPage() {
       description: string;
     }>;
   } | null>(null);
+
+  // Manual editing state
+  const [manualSkills, setManualSkills] = useState<string[]>([]);
+  const [manualLocations, setManualLocations] = useState<string[]>([]);
+  const [preferredLocation, setPreferredLocation] = useState<string>('');
+  const [skillInput, setSkillInput] = useState('');
+  const [locationInput, setLocationInput] = useState('');
+  const [uiNote, setUiNote] = useState('');
+
+  // Store original CV values for reset
+  const [originalSkills, setOriginalSkills] = useState<string[]>([]);
+  const [originalLocations, setOriginalLocations] = useState<string[]>([]);
+
+  // Initialize manual state when result changes
+  useEffect(() => {
+    if (result?.cvProfile) {
+      const skills = result.cvProfile.core_skills || [];
+      const locations = result.cvProfile.locations || [];
+      
+      setManualSkills(skills);
+      setManualLocations(locations);
+      setOriginalSkills(skills);
+      setOriginalLocations(locations);
+      setPreferredLocation(locations.length > 0 ? locations[0] : '');
+    }
+  }, [result]);
+
+  // Ensure preferredLocation stays valid
+  useEffect(() => {
+    if (manualLocations.length === 0) {
+      setPreferredLocation('');
+    } else if (!manualLocations.includes(preferredLocation)) {
+      setPreferredLocation(manualLocations[0]);
+    }
+  }, [manualLocations, preferredLocation]);
+
+  // Add skill handler
+  const handleAddSkill = () => {
+    const trimmed = skillInput.trim();
+    if (!trimmed) return;
+    
+    const exists = manualSkills.some(s => s.toLowerCase() === trimmed.toLowerCase());
+    if (exists) {
+      setUiNote('Already added');
+      setTimeout(() => setUiNote(''), 2000);
+      return;
+    }
+    
+    setManualSkills([...manualSkills, trimmed]);
+    setSkillInput('');
+  };
+
+  const handleRemoveSkill = (skill: string) => {
+    setManualSkills(manualSkills.filter(s => s !== skill));
+  };
+
+  const handleClearSkills = () => {
+    setManualSkills([]);
+  };
+
+  // Add location handler
+  const handleAddLocation = () => {
+    const trimmed = locationInput.trim();
+    if (!trimmed) return;
+    
+    const exists = manualLocations.some(l => l.toLowerCase() === trimmed.toLowerCase());
+    if (exists) {
+      setUiNote('Already added');
+      setTimeout(() => setUiNote(''), 2000);
+      return;
+    }
+    
+    setManualLocations([...manualLocations, trimmed]);
+    setLocationInput('');
+  };
+
+  const handleRemoveLocation = (location: string) => {
+    setManualLocations(manualLocations.filter(l => l !== location));
+  };
+
+  const handleResetToCV = () => {
+    setManualSkills(originalSkills);
+    setManualLocations(originalLocations);
+    setPreferredLocation(originalLocations.length > 0 ? originalLocations[0] : '');
+  };
+
+  // Calculate adjusted scores
+  const getAdjustedMatches = () => {
+    if (!result) return [];
+
+    return result.matches.map(match => {
+      const job = result.jobs.find(j => j.id === match.jobId);
+      if (!job) return { ...match, adjustedScore: match.score };
+
+      const apiScore = match.score;
+      
+      // Skill overlap count (case-insensitive)
+      const jobSkills = (job.skills || []).map(s => s.toLowerCase());
+      const userSkills = manualSkills.map(s => s.toLowerCase());
+      const skillOverlapCount = jobSkills.filter(s => userSkills.includes(s)).length;
+
+      // Location boost
+      let locationBoost = 0;
+      const jobLoc = job.location.toLowerCase();
+      const preferredLoc = preferredLocation.toLowerCase();
+      const userLocs = manualLocations.map(l => l.toLowerCase());
+
+      if (preferredLoc && jobLoc === preferredLoc) {
+        locationBoost = 10;
+      } else if (userLocs.includes(jobLoc)) {
+        locationBoost = 5;
+      }
+
+      const adjustedScore = Math.min(100, Math.max(0, apiScore + skillOverlapCount * 2 + locationBoost));
+
+      return {
+        ...match,
+        adjustedScore,
+        skillOverlapCount,
+        locationBoost
+      };
+    }).sort((a, b) => b.adjustedScore - a.adjustedScore);
+  };
+
+  const hasUserChanges = () => {
+    if (!result) return false;
+    
+    const skillsChanged = JSON.stringify(manualSkills.sort()) !== JSON.stringify(originalSkills.sort());
+    const locationsChanged = JSON.stringify(manualLocations.sort()) !== JSON.stringify(originalLocations.sort());
+    
+    return skillsChanged || locationsChanged;
+  };
 
   const validateFile = (selectedFile: File): boolean => {
     if (selectedFile.type !== 'application/pdf') {
@@ -568,62 +700,241 @@ export default function UploadPage() {
               </div>
             </div>
 
+            {/* Manual Editing Section */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-800">
+                    Refine your preferences
+                  </h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Adjust your skills and locations to get better matches
+                  </p>
+                </div>
+                {hasUserChanges() && (
+                  <button
+                    onClick={handleResetToCV}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                  >
+                    Reset to CV
+                  </button>
+                )}
+              </div>
+              <div className="p-6 space-y-6">
+                {/* Skills Section */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Skills
+                  </label>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Add tools, languages, frameworks — press Enter to add
+                  </p>
+                  
+                  {/* Skills Input */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={skillInput}
+                      onChange={(e) => setSkillInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddSkill();
+                        }
+                      }}
+                      placeholder="Add a skill (e.g. React) and press Enter"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
+                    />
+                    {uiNote && (
+                      <div className="absolute -bottom-6 left-0 text-xs text-amber-600">
+                        {uiNote}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Skills Chips */}
+                  {manualSkills.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {manualSkills.map((skill, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 text-sm font-medium rounded-full border border-blue-200 transition-all hover:bg-blue-100"
+                        >
+                          {skill}
+                          <button
+                            onClick={() => handleRemoveSkill(skill)}
+                            className="ml-0.5 hover:bg-blue-200 rounded-full p-0.5 transition-colors"
+                            aria-label={`Remove ${skill}`}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Clear Button */}
+                  {manualSkills.length > 0 && (
+                    <button
+                      onClick={handleClearSkills}
+                      className="mt-3 text-xs text-gray-500 hover:text-gray-700 font-medium transition-colors"
+                    >
+                      Clear all skills
+                    </button>
+                  )}
+                </div>
+
+                {/* Locations Section */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Locations
+                  </label>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Add multiple locations to widen your search
+                  </p>
+                  
+                  {/* Location Input */}
+                  <input
+                    type="text"
+                    value={locationInput}
+                    onChange={(e) => setLocationInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddLocation();
+                      }
+                    }}
+                    placeholder="Add a location (e.g. Copenhagen) and press Enter"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
+                  />
+
+                  {/* Location Chips */}
+                  {manualLocations.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {manualLocations.map((location, idx) => {
+                        const isPreferred = location === preferredLocation;
+                        return (
+                          <span
+                            key={idx}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full border transition-all ${
+                              isPreferred
+                                ? 'bg-green-50 text-green-700 border-green-300 ring-2 ring-green-100'
+                                : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                            }`}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            {location}
+                            {isPreferred && (
+                              <span className="text-xs bg-green-600 text-white px-1.5 py-0.5 rounded-full">
+                                Preferred
+                              </span>
+                            )}
+                            <button
+                              onClick={() => handleRemoveLocation(location)}
+                              className="ml-0.5 hover:bg-gray-200 rounded-full p-0.5 transition-colors"
+                              aria-label={`Remove ${location}`}
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Preferred Location Dropdown */}
+                  {manualLocations.length > 0 && (
+                    <div className="mt-4">
+                      <label className="block text-xs font-medium text-gray-600 mb-2">
+                        Preferred location
+                      </label>
+                      <select
+                        value={preferredLocation}
+                        onChange={(e) => setPreferredLocation(e.target.value)}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm bg-white"
+                      >
+                        {manualLocations.map((location, idx) => (
+                          <option key={idx} value={location}>
+                            {location}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Section 2: Top Matches */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-6">
                 Top matches
               </h2>
               <div className="grid gap-5">
-                {result.matches
-                  .sort((a, b) => b.score - a.score)
-                  .map((match) => {
-                    const job = result.jobs.find(j => j.id === match.jobId);
-                    if (!job) return null;
-                    
-                    const getScoreBadgeColor = (score: number) => {
-                      if (score >= 80) return 'bg-green-50 text-green-700 border-green-200';
-                      if (score >= 60) return 'bg-yellow-50 text-yellow-700 border-yellow-200';
-                      return 'bg-gray-50 text-gray-700 border-gray-200';
-                    };
+                {getAdjustedMatches().map((match) => {
+                  const job = result.jobs.find(j => j.id === match.jobId);
+                  if (!job) return null;
+                  
+                  const getScoreBadgeColor = (score: number) => {
+                    if (score >= 80) return 'bg-green-50 text-green-700 border-green-200';
+                    if (score >= 60) return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+                    return 'bg-gray-50 text-gray-700 border-gray-200';
+                  };
 
-                    return (
-                      <div key={match.jobId} className="bg-white rounded-lg border border-gray-200 p-6 hover:border-gray-300 transition-colors">
-                        {/* Job Header */}
-                        <div className="flex items-start justify-between gap-4 mb-4">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                              {job.title}
-                            </h3>
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                              </svg>
-                              <span>{job.location}</span>
-                            </div>
-                          </div>
-                          <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold border flex-shrink-0 ${getScoreBadgeColor(match.score)}`}>
-                            {match.score}
+                  const isAdjusted = hasUserChanges();
+
+                  return (
+                    <div key={match.jobId} className="bg-white rounded-lg border border-gray-200 p-6 hover:border-gray-300 transition-colors">
+                      {/* Job Header */}
+                      <div className="flex items-start justify-between gap-4 mb-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                            {job.title}
+                          </h3>
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span>{job.location}</span>
                           </div>
                         </div>
-
-                        {/* Match Reasons */}
-                        <div className="mt-4 pt-4 border-t border-gray-100">
-                          <p className="text-sm font-medium text-gray-700 mb-3">Why it matches you</p>
-                          <ul className="space-y-2">
-                            {match.reasons.map((reason, idx) => (
-                              <li key={idx} className="text-sm text-gray-600 flex items-start">
-                                <svg className="w-4 h-4 text-gray-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
-                                <span>{reason}</span>
-                              </li>
-                            ))}
-                          </ul>
+                        <div className="flex flex-col items-end gap-1">
+                          <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold border flex-shrink-0 ${getScoreBadgeColor(match.adjustedScore)}`}>
+                            {match.adjustedScore}
+                          </div>
+                          {isAdjusted && (
+                            <span className="text-xs text-gray-500">
+                              Adjusted by your preferences
+                            </span>
+                          )}
                         </div>
                       </div>
-                    );
-                  })}
+
+                      {/* Match Reasons */}
+                      <div className="mt-4 pt-4 border-t border-gray-100">
+                        <p className="text-sm font-medium text-gray-700 mb-3">Why it matches you</p>
+                        <ul className="space-y-2">
+                          {match.reasons.map((reason, idx) => (
+                            <li key={idx} className="text-sm text-gray-600 flex items-start">
+                              <svg className="w-4 h-4 text-gray-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                              <span>{reason}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
