@@ -66,8 +66,8 @@ export const authOptions: NextAuthOptions = {
     },
   },
   session: {
-    // Use JWT for credentials provider, database for OAuth
-    strategy: process.env.DATABASE_URL ? 'database' : 'jwt',
+    // Always use JWT for flexibility with test accounts
+    strategy: 'jwt',
   },
   secret: process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production',
 };
