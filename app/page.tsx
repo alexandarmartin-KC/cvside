@@ -145,6 +145,62 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Problem/Solution Section */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl shadow-xl p-8 md:p-12 text-white">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-3xl font-bold mb-4">
+              Stop Wasting Hours Searching Multiple Job Sites
+            </h2>
+            <p className="text-lg text-blue-50 mb-6 leading-relaxed">
+              Tired of opening dozens of tabs? Switching between LinkedIn, Indeed, Glassdoor, and countless company websites just to find jobs that might fit your profile? We've all been there.
+            </p>
+            <p className="text-xl font-semibold mb-6">
+              CV Matcher brings all job opportunities to one place.
+            </p>
+            <div className="grid md:grid-cols-2 gap-6 text-left">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
+                <div className="flex items-start">
+                  <svg className="w-6 h-6 text-red-300 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  <div className="ml-4">
+                    <h3 className="font-semibold text-white mb-2">The Old Way</h3>
+                    <ul className="text-blue-50 text-sm space-y-2">
+                      <li>• Visit 10+ job sites separately</li>
+                      <li>• Manually read each job description</li>
+                      <li>• Guess if you're a good match</li>
+                      <li>• Miss opportunities across platforms</li>
+                      <li>• Spend hours comparing roles</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
+                <div className="flex items-start">
+                  <svg className="w-6 h-6 text-green-300 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <div className="ml-4">
+                    <h3 className="font-semibold text-white mb-2">With CV Matcher</h3>
+                    <ul className="text-blue-50 text-sm space-y-2">
+                      <li>• Upload CV once, get all matches</li>
+                      <li>• AI analyzes fit automatically</li>
+                      <li>• See ranked results with scores</li>
+                      <li>• Aggregates LinkedIn, Indeed & more</li>
+                      <li>• Get results in under 30 seconds</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="mt-8">
+              <p className="text-lg text-blue-50">
+                <span className="font-semibold">We scan opportunities from LinkedIn, Indeed, Glassdoor, ZipRecruiter, and dozens of company career pages</span> — all in one search, ranked by how well they match your unique profile.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
