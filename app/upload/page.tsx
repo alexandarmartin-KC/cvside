@@ -569,76 +569,53 @@ export default function UploadPage() {
             </div>
 
             {/* Section 2: Top Matches */}
-            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-              <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Top Job Matches
-                </h2>
-              </div>
-              <div className="divide-y divide-gray-200">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                Top matches
+              </h2>
+              <div className="grid gap-5">
                 {result.matches
                   .sort((a, b) => b.score - a.score)
-                  .map((match, index) => {
+                  .map((match) => {
                     const job = result.jobs.find(j => j.id === match.jobId);
                     if (!job) return null;
                     
                     const getScoreBadgeColor = (score: number) => {
-                      if (score >= 80) return 'bg-green-100 text-green-700 border-green-200';
-                      if (score >= 60) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-                      return 'bg-gray-100 text-gray-700 border-gray-200';
+                      if (score >= 80) return 'bg-green-50 text-green-700 border-green-200';
+                      if (score >= 60) return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+                      return 'bg-gray-50 text-gray-700 border-gray-200';
                     };
 
                     return (
-                      <div key={match.jobId} className="p-6 hover:bg-gray-50 transition-colors">
+                      <div key={match.jobId} className="bg-white rounded-lg border border-gray-200 p-6 hover:border-gray-300 transition-colors">
                         {/* Job Header */}
-                        <div className="flex items-start justify-between gap-4 mb-3">
+                        <div className="flex items-start justify-between gap-4 mb-4">
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3 mb-2">
-                              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-100 text-gray-600 text-sm font-semibold flex-shrink-0">
-                                {index + 1}
-                              </span>
-                              <h3 className="text-lg font-semibold text-gray-900 truncate">
-                                {job.title}
-                              </h3>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 ml-10">
-                              <span className="font-medium">{job.company}</span>
-                              <span className="text-gray-400">•</span>
-                              <span className="flex items-center gap-1">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                {job.location}
-                              </span>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                              {job.title}
+                            </h3>
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              <span>{job.location}</span>
                             </div>
                           </div>
-                          <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold border flex-shrink-0 ${getScoreBadgeColor(match.score)}`}>
-                            {match.score}% match
-                          </div>
-                        </div>
-
-                        {/* Required Skills */}
-                        <div className="ml-10 mb-3">
-                          <div className="flex flex-wrap gap-2">
-                            {job.skills.map((skill, idx) => (
-                              <span
-                                key={idx}
-                                className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded"
-                              >
-                                {skill}
-                              </span>
-                            ))}
+                          <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold border flex-shrink-0 ${getScoreBadgeColor(match.score)}`}>
+                            {match.score}
                           </div>
                         </div>
 
                         {/* Match Reasons */}
-                        <div className="ml-10 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                          <p className="text-sm font-medium text-gray-900 mb-2">Why this matches:</p>
-                          <ul className="space-y-1">
+                        <div className="mt-4 pt-4 border-t border-gray-100">
+                          <p className="text-sm font-medium text-gray-700 mb-3">Why it matches you</p>
+                          <ul className="space-y-2">
                             {match.reasons.map((reason, idx) => (
-                              <li key={idx} className="text-sm text-gray-700 flex items-start">
-                                <span className="text-green-500 mr-2">•</span>
+                              <li key={idx} className="text-sm text-gray-600 flex items-start">
+                                <svg className="w-4 h-4 text-gray-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
                                 <span>{reason}</span>
                               </li>
                             ))}
