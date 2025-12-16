@@ -15,3 +15,44 @@
   animation: progress 1.5s ease-in-out infinite;
   width: 40%;
 }
+
+/* Article prose styling */
+.prose-content {
+  @apply text-gray-800 leading-relaxed;
+}
+
+.prose-content p {
+  @apply mb-5 text-base leading-relaxed;
+}
+
+.prose-content h2 {
+  @apply text-2xl font-bold text-gray-900 mt-10 mb-4;
+}
+
+.prose-content h3 {
+  @apply text-xl font-semibold text-gray-900 mt-8 mb-3;
+}
+
+.prose-content ul {
+  @apply mb-5 list-disc list-inside space-y-2;
+}
+
+.prose-content ol {
+  @apply mb-5 list-decimal list-inside space-y-2;
+}
+
+.prose-content li {
+  @apply text-base text-gray-700;
+}
+
+.prose-content strong {
+  @apply font-semibold text-gray-900;
+}
+
+.prose-content em {
+  @apply italic;
+}
+
+.prose-content code {
+  @apply bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono text-gray-800;
+}
