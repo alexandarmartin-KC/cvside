@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import pdf from 'pdf-parse';
 import OpenAI from 'openai';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 const SAMPLE_JOBS = [
   {
     id: 1,
