@@ -72,6 +72,7 @@ const SAMPLE_JOBS = [
   }
 ];
 
+// Mock functions (not used in demo mode, but kept for future API integration)
 async function analyzeCV(cvText: string) {
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
@@ -194,16 +195,66 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Analyze CV with OpenAI
-    const cvProfile = await analyzeCV(extractedText);
+    // Mock CV Profile (for demo without OpenAI API)
+    const cvProfile = {
+      name: "John Doe",
+      title: "Senior Full-Stack Developer",
+      seniority_level: "Senior",
+      core_skills: ["JavaScript", "TypeScript", "React", "Node.js", "PostgreSQL", "AWS", "Docker"],
+      industries: ["Technology", "SaaS", "E-commerce"],
+      locations: ["San Francisco, CA", "Remote"],
+      years_experience_estimate: 7,
+      summary: "Experienced full-stack developer with 7+ years building scalable web applications. Strong expertise in modern JavaScript frameworks, cloud infrastructure, and leading development teams. Proven track record of delivering high-quality products in fast-paced startup environments."
+    };
 
-    // Rank jobs based on CV profile
-    const jobMatches = await rankJobs(cvProfile);
+    // Mock job matches with realistic scores
+    const matches = [
+      {
+        jobId: 1,
+        score: 95,
+        reasoning: "Excellent match - your extensive full-stack experience with React, Node.js, and AWS aligns perfectly with the senior role requirements. Your 7 years of experience exceeds the 5+ years requirement."
+      },
+      {
+        jobId: 4,
+        score: 88,
+        reasoning: "Strong match - your AWS and Docker experience combined with Python skills make you well-suited for this DevOps role. Your automation background is a key strength."
+      },
+      {
+        jobId: 2,
+        score: 85,
+        reasoning: "Very good match - your React and TypeScript expertise directly matches the core requirements. Your senior experience would bring valuable leadership to the team."
+      },
+      {
+        jobId: 8,
+        score: 82,
+        reasoning: "Good match - your 7 years of experience and technical leadership skills align with this Tech Lead position. Your broad technology stack is beneficial for leading diverse teams."
+      },
+      {
+        jobId: 3,
+        score: 70,
+        reasoning: "Decent match - while your backend experience is strong, this role focuses on Python/Django which isn't your primary stack. Your PostgreSQL and Docker skills are relevant."
+      },
+      {
+        jobId: 6,
+        score: 65,
+        reasoning: "Moderate match - you have some relevant skills like Python and AWS, but this role requires specific big data experience with Spark and Airflow that you haven't highlighted."
+      },
+      {
+        jobId: 7,
+        score: 45,
+        reasoning: "Limited match - this mobile development role requires Swift/Kotlin experience which doesn't align with your web development background."
+      },
+      {
+        jobId: 5,
+        score: 35,
+        reasoning: "Not a good match - this is a junior position and your senior-level experience makes you overqualified. You'd likely be better suited for more advanced roles."
+      }
+    ];
 
     // Return comprehensive response
     return NextResponse.json({
       cvProfile,
-      matches: jobMatches.matches,
+      matches,
       jobs: SAMPLE_JOBS
     });
 
