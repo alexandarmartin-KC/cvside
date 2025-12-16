@@ -8,6 +8,7 @@ export default function UploadPage() {
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<{
     cvProfile: {
@@ -58,8 +59,10 @@ export default function UploadPage() {
     if (validateFile(selectedFile)) {
       setFile(selectedFile);
       setError('');
+      setCurrentStep(1); // Step 1: CV uploaded
     } else {
       setFile(null);
+      setCurrentStep(0);
     }
   };
 
@@ -81,8 +84,10 @@ export default function UploadPage() {
     if (droppedFile && validateFile(droppedFile)) {
       setFile(droppedFile);
       setError('');
+      setCurrentStep(1); // Step 1: CV uploaded
     } else if (droppedFile) {
       setFile(null);
+      setCurrentStep(0);
     }
   };
 
@@ -93,6 +98,7 @@ export default function UploadPage() {
   const handleRemoveFile = () => {
     setFile(null);
     setError('');
+    setCurrentStep(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -114,11 +120,15 @@ export default function UploadPage() {
     setStatus('Uploading...');
     setError('');
     setResult(null);
+    setCurrentStep(2); // Step 2: Reading content
 
     const formData = new FormData();
     formData.append('file', file);
 
     try {
+      // Simulate progress through steps
+      setTimeout(() => setCurrentStep(3), 800); // Step 3: Analyzing skills
+
       const response = await fetch('/api/cv/parse', {
         method: 'POST',
         body: formData,
@@ -130,11 +140,13 @@ export default function UploadPage() {
       }
 
       const data = await response.json();
+      setCurrentStep(4); // Step 4: Matching jobs
       setResult(data);
       setStatus('Upload successful!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setStatus('');
+      setCurrentStep(1); // Reset to step 1 on error
     } finally {
       setLoading(false);
     }
@@ -332,6 +344,104 @@ export default function UploadPage() {
               )}
             </button>
           </div>
+
+          {/* Progress Steps */}
+          {currentStep > 0 && (
+            <div className="mt-8 mb-6">
+              <div className="flex items-center justify-between max-w-2xl mx-auto">
+                {/* Step 1: CV Uploaded */}
+                <div className="flex flex-col items-center flex-1">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-colors ${
+                    currentStep >= 1 ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                    {currentStep >= 1 ? (
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    ) : (
+                      <span className="text-sm font-medium">1</span>
+                    )}
+                  </div>
+                  <span className={`text-xs text-center ${currentStep >= 1 ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>
+                    CV uploaded
+                  </span>
+                </div>
+
+                {/* Connector Line */}
+                <div className={`h-0.5 flex-1 mx-2 transition-colors ${currentStep >= 2 ? 'bg-green-300' : 'bg-gray-200'}`} />
+
+                {/* Step 2: Reading Content */}
+                <div className="flex flex-col items-center flex-1">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-colors ${
+                    currentStep > 2 ? 'bg-green-100 text-green-600' : currentStep === 2 ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                    {currentStep > 2 ? (
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    ) : currentStep === 2 ? (
+                      <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    ) : (
+                      <span className="text-sm font-medium">2</span>
+                    )}
+                  </div>
+                  <span className={`text-xs text-center ${currentStep >= 2 ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>
+                    Reading content
+                  </span>
+                </div>
+
+                {/* Connector Line */}
+                <div className={`h-0.5 flex-1 mx-2 transition-colors ${currentStep >= 3 ? 'bg-green-300' : 'bg-gray-200'}`} />
+
+                {/* Step 3: Analyzing Skills */}
+                <div className="flex flex-col items-center flex-1">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-colors ${
+                    currentStep > 3 ? 'bg-green-100 text-green-600' : currentStep === 3 ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                    {currentStep > 3 ? (
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    ) : currentStep === 3 ? (
+                      <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    ) : (
+                      <span className="text-sm font-medium">3</span>
+                    )}
+                  </div>
+                  <span className={`text-xs text-center ${currentStep >= 3 ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>
+                    Analyzing skills
+                  </span>
+                </div>
+
+                {/* Connector Line */}
+                <div className={`h-0.5 flex-1 mx-2 transition-colors ${currentStep >= 4 ? 'bg-green-300' : 'bg-gray-200'}`} />
+
+                {/* Step 4: Matching Jobs */}
+                <div className="flex flex-col items-center flex-1">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-colors ${
+                    currentStep >= 4 ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                    {currentStep >= 4 ? (
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    ) : (
+                      <span className="text-sm font-medium">4</span>
+                    )}
+                  </div>
+                  <span className={`text-xs text-center ${currentStep >= 4 ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>
+                    Matching jobs
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Status Area */}
           <div className="mt-6">
