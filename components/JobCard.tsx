@@ -12,7 +12,7 @@ type JobCardProps = {
   score?: number;
   reasons?: string[];
   isNew?: boolean;
-  appliedAt?: Date;
+  appliedAt?: Date | null;
   actions?: React.ReactNode;
 };
 
