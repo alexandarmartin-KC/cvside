@@ -22,9 +22,23 @@ export async function POST(req: Request) {
     });
 
     if (existing) {
-      return NextResponse.json({ message: 'Already applied' });
+      // Update existing AppliedJob
+      await prisma.appliedJob.update({
+        where: {
+          userId_jobId: {
+            userId: session.user.id,
+            jobId,
+          },
+        },
+        data: {
+          status: status || 'APPLIED',
+          appliedAt: status === 'APPLIED' && !existing.appliedAt ? new Date() : existing.appliedAt,
+        },
+      });
+      return NextResponse.json({ success: true, message: 'Updated' });
     }
 
+    // Create new AppliedJob
     await prisma.appliedJob.create({
       data: {
         userId: session.user.id,
@@ -34,6 +48,7 @@ export async function POST(req: Request) {
       },
     });
 
+    // Note: We do NOT delete SavedJob - the job stays in both lists
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error marking job as applied:', error);

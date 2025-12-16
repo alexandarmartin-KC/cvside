@@ -47,12 +47,7 @@ export function MoveToAppliedButton({ savedJobId, jobId }: { savedJobId: string;
         body: JSON.stringify({ jobId, status: 'APPLIED' }),
       });
       if (res.ok) {
-        // Also unsave
-        await fetch(`/api/dashboard/jobs/unsave`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ savedJobId }),
-        });
+        // Job is now marked as applied, but still stays in saved jobs
         router.refresh();
       }
     } finally {
@@ -66,7 +61,7 @@ export function MoveToAppliedButton({ savedJobId, jobId }: { savedJobId: string;
       disabled={loading}
       className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
     >
-      {loading ? 'Moving...' : 'Mark as Applied'}
+      {loading ? 'Marking...' : 'Mark as Applied'}
     </button>
   );
 }
