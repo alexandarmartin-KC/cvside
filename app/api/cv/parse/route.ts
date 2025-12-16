@@ -201,53 +201,89 @@ export async function POST(request: NextRequest) {
       title: "Senior Full-Stack Developer",
       seniority_level: "Senior",
       core_skills: ["JavaScript", "TypeScript", "React", "Node.js", "PostgreSQL", "AWS", "Docker"],
-      industries: ["Technology", "SaaS", "E-commerce"],
       locations: ["San Francisco, CA", "Remote"],
-      years_experience_estimate: 7,
       summary: "Experienced full-stack developer with 7+ years building scalable web applications. Strong expertise in modern JavaScript frameworks, cloud infrastructure, and leading development teams. Proven track record of delivering high-quality products in fast-paced startup environments."
     };
 
-    // Mock job matches with realistic scores
+    // Mock job matches with 3-5 bullet point reasons
     const matches = [
       {
         jobId: 1,
         score: 95,
-        reasoning: "Excellent match - your extensive full-stack experience with React, Node.js, and AWS aligns perfectly with the senior role requirements. Your 7 years of experience exceeds the 5+ years requirement."
+        reasons: [
+          "Your 7 years of experience exceeds the 5+ years requirement",
+          "Strong match in core technologies: React, Node.js, PostgreSQL, and AWS",
+          "Senior-level experience aligns perfectly with team leadership expectations",
+          "Location preference matches (San Francisco, CA)"
+        ]
       },
       {
         jobId: 4,
         score: 88,
-        reasoning: "Strong match - your AWS and Docker experience combined with Python skills make you well-suited for this DevOps role. Your automation background is a key strength."
+        reasons: [
+          "Extensive AWS and Docker experience matches DevOps requirements",
+          "5+ years of experience meets the minimum threshold",
+          "Strong automation and infrastructure skills demonstrated",
+          "Cloud platform expertise is a core strength in your profile"
+        ]
       },
       {
         jobId: 2,
         score: 85,
-        reasoning: "Very good match - your React and TypeScript expertise directly matches the core requirements. Your senior experience would bring valuable leadership to the team."
+        reasons: [
+          "Expert-level React and TypeScript skills directly match requirements",
+          "Your senior experience would bring valuable mentorship",
+          "Remote location preference aligns with job offering",
+          "Modern frontend development is a demonstrated strength"
+        ]
       },
       {
         jobId: 8,
         score: 82,
-        reasoning: "Good match - your 7 years of experience and technical leadership skills align with this Tech Lead position. Your broad technology stack is beneficial for leading diverse teams."
+        reasons: [
+          "7 years of experience qualifies for Tech Lead position",
+          "Demonstrated technical leadership in previous roles",
+          "Broad full-stack knowledge valuable for team guidance",
+          "Senior-level expertise supports mentoring junior engineers"
+        ]
       },
       {
         jobId: 3,
         score: 70,
-        reasoning: "Decent match - while your backend experience is strong, this role focuses on Python/Django which isn't your primary stack. Your PostgreSQL and Docker skills are relevant."
+        reasons: [
+          "Strong backend fundamentals with Node.js and PostgreSQL",
+          "Docker and Kubernetes experience is relevant",
+          "Python/Django is not your primary stack, creating skill gap",
+          "Would require learning curve for Python-specific frameworks"
+        ]
       },
       {
         jobId: 6,
         score: 65,
-        reasoning: "Moderate match - you have some relevant skills like Python and AWS, but this role requires specific big data experience with Spark and Airflow that you haven't highlighted."
+        reasons: [
+          "AWS experience is relevant for cloud-based pipelines",
+          "Some Python exposure mentioned in profile",
+          "Missing specialized big data tools (Spark, Airflow)",
+          "Would require significant upskilling in data engineering"
+        ]
       },
       {
         jobId: 7,
         score: 45,
-        reasoning: "Limited match - this mobile development role requires Swift/Kotlin experience which doesn't align with your web development background."
+        reasons: [
+          "No mobile development experience mentioned",
+          "Swift and Kotlin are outside your skill set",
+          "Web development background doesn't transfer directly"
+        ]
       },
       {
         jobId: 5,
         score: 35,
-        reasoning: "Not a good match - this is a junior position and your senior-level experience makes you overqualified. You'd likely be better suited for more advanced roles."
+        reasons: [
+          "This is a junior-level position",
+          "Your 7 years of senior experience makes you overqualified",
+          "Better suited for mid-to-senior level opportunities"
+        ]
       }
     ];
 

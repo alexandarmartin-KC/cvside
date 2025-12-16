@@ -15,15 +15,13 @@ export default function UploadPage() {
       title: string;
       seniority_level: string;
       core_skills: string[];
-      industries: string[];
       locations: string[];
-      years_experience_estimate: number;
       summary: string;
     };
     matches: Array<{
       jobId: number;
       score: number;
-      reasoning: string;
+      reasons: string[];
     }>;
     jobs: Array<{
       id: number;
@@ -414,7 +412,7 @@ export default function UploadPage() {
                   <span className="text-gray-400">•</span>
                   <span>{result.cvProfile.seniority_level}</span>
                   <span className="text-gray-400">•</span>
-                  <span>{result.cvProfile.years_experience_estimate} years experience</span>
+                  <span>{result.cvProfile.locations.join(' • ')}</span>
                 </div>
 
                 {/* Summary Paragraph */}
@@ -436,14 +434,6 @@ export default function UploadPage() {
                     ))}
                   </div>
                 </div>
-
-                {/* Industries (if available) */}
-                {result.cvProfile.industries.length > 0 && (
-                  <div className="pt-4 border-t border-gray-200">
-                    <p className="text-sm font-medium text-gray-700 mb-2">Industries</p>
-                    <p className="text-gray-600">{result.cvProfile.industries.join(' • ')}</p>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -511,12 +501,17 @@ export default function UploadPage() {
                           </div>
                         </div>
 
-                        {/* Match Reasoning */}
+                        {/* Match Reasons */}
                         <div className="ml-10 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                          <p className="text-sm text-gray-700 leading-relaxed">
-                            <span className="font-medium text-gray-900">Why this matches: </span>
-                            {match.reasoning}
-                          </p>
+                          <p className="text-sm font-medium text-gray-900 mb-2">Why this matches:</p>
+                          <ul className="space-y-1">
+                            {match.reasons.map((reason, idx) => (
+                              <li key={idx} className="text-sm text-gray-700 flex items-start">
+                                <span className="text-green-500 mr-2">•</span>
+                                <span>{reason}</span>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
                       </div>
                     );
