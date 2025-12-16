@@ -34,31 +34,74 @@ export default function UploadPage() {
     }>;
   } | null>(null);
 
-  // Manual editing state
+  // Draft state (user is editing)
   const [manualSkills, setManualSkills] = useState<string[]>([]);
   const [manualLocations, setManualLocations] = useState<string[]>([]);
   const [preferredLocation, setPreferredLocation] = useState<string>('');
+
+  // Applied state (used for scoring)
+  const [appliedSkills, setAppliedSkills] = useState<string[]>([]);
+  const [appliedLocations, setAppliedLocations] = useState<string[]>([]);
+  const [appliedPreferred, setAppliedPreferred] = useState<string>('');
+
+  // Original state (from CV)
+  const [originalSkills, setOriginalSkills] = useState<string[]>([]);
+  const [originalLocations, setOriginalLocations] = useState<string[]>([]);
+  const [originalPreferred, setOriginalPreferred] = useState<string>('');
+
+  // UI state
   const [skillInput, setSkillInput] = useState('');
   const [locationInput, setLocationInput] = useState('');
   const [uiNote, setUiNote] = useState('');
+  const [isDirty, setIsDirty] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
 
-  // Store original CV values for reset
-  const [originalSkills, setOriginalSkills] = useState<string[]>([]);
-  const [originalLocations, setOriginalLocations] = useState<string[]>([]);
+  // Helper to compare arrays case-insensitive as sets
+  const arraysEqualIgnoreCase = (arr1: string[], arr2: string[]): boolean => {
+    if (arr1.length !== arr2.length) return false;
+    const set1 = new Set(arr1.map(s => s.toLowerCase()));
+    const set2 = new Set(arr2.map(s => s.toLowerCase()));
+    if (set1.size !== set2.size) return false;
+    for (const item of set1) {
+      if (!set2.has(item)) return false;
+    }
+    return true;
+  };
 
-  // Initialize manual state when result changes
+  // Initialize when result changes
   useEffect(() => {
     if (result?.cvProfile) {
       const skills = result.cvProfile.core_skills || [];
       const locations = result.cvProfile.locations || [];
+      const preferred = locations.length > 0 ? locations[0] : '';
       
+      // Set all three states
       setManualSkills(skills);
       setManualLocations(locations);
+      setPreferredLocation(preferred);
+      
+      setAppliedSkills(skills);
+      setAppliedLocations(locations);
+      setAppliedPreferred(preferred);
+      
       setOriginalSkills(skills);
       setOriginalLocations(locations);
-      setPreferredLocation(locations.length > 0 ? locations[0] : '');
+      setOriginalPreferred(preferred);
+
+      setIsDirty(false);
+      setUpdatedAt(null);
     }
   }, [result]);
+
+  // Check if draft differs from applied
+  useEffect(() => {
+    const skillsDifferent = !arraysEqualIgnoreCase(manualSkills, appliedSkills);
+    const locationsDifferent = !arraysEqualIgnoreCase(manualLocations, appliedLocations);
+    const preferredDifferent = preferredLocation.toLowerCase() !== appliedPreferred.toLowerCase();
+    
+    setIsDirty(skillsDifferent || locationsDifferent || preferredDifferent);
+  }, [manualSkills, manualLocations, preferredLocation, appliedSkills, appliedLocations, appliedPreferred]);
 
   // Ensure preferredLocation stays valid
   useEffect(() => {
@@ -116,10 +159,26 @@ export default function UploadPage() {
   const handleResetToCV = () => {
     setManualSkills(originalSkills);
     setManualLocations(originalLocations);
-    setPreferredLocation(originalLocations.length > 0 ? originalLocations[0] : '');
+    setPreferredLocation(originalPreferred);
   };
 
-  // Calculate adjusted scores
+  // Update matches - apply draft to applied state
+  const handleUpdateMatches = async () => {
+    setIsUpdating(true);
+    
+    // Simulate a brief processing delay for UX
+    await new Promise(resolve => setTimeout(resolve, 400));
+    
+    // Apply draft to applied state
+    setAppliedSkills(manualSkills);
+    setAppliedLocations(manualLocations);
+    setAppliedPreferred(preferredLocation);
+    
+    setUpdatedAt(new Date());
+    setIsUpdating(false);
+  };
+
+  // Calculate adjusted scores using APPLIED state
   const getAdjustedMatches = () => {
     if (!result) return [];
 
@@ -129,16 +188,16 @@ export default function UploadPage() {
 
       const apiScore = match.score;
       
-      // Skill overlap count (case-insensitive)
+      // Use APPLIED state for scoring
       const jobSkills = (job.skills || []).map(s => s.toLowerCase());
-      const userSkills = manualSkills.map(s => s.toLowerCase());
+      const userSkills = appliedSkills.map(s => s.toLowerCase());
       const skillOverlapCount = jobSkills.filter(s => userSkills.includes(s)).length;
 
       // Location boost
       let locationBoost = 0;
       const jobLoc = job.location.toLowerCase();
-      const preferredLoc = preferredLocation.toLowerCase();
-      const userLocs = manualLocations.map(l => l.toLowerCase());
+      const preferredLoc = appliedPreferred.toLowerCase();
+      const userLocs = appliedLocations.map(l => l.toLowerCase());
 
       if (preferredLoc && jobLoc === preferredLoc) {
         locationBoost = 10;
@@ -157,13 +216,24 @@ export default function UploadPage() {
     }).sort((a, b) => b.adjustedScore - a.adjustedScore);
   };
 
-  const hasUserChanges = () => {
+  const hasAppliedChanges = () => {
     if (!result) return false;
     
-    const skillsChanged = JSON.stringify(manualSkills.sort()) !== JSON.stringify(originalSkills.sort());
-    const locationsChanged = JSON.stringify(manualLocations.sort()) !== JSON.stringify(originalLocations.sort());
+    const skillsChanged = !arraysEqualIgnoreCase(appliedSkills, originalSkills);
+    const locationsChanged = !arraysEqualIgnoreCase(appliedLocations, originalLocations);
+    const preferredChanged = appliedPreferred.toLowerCase() !== originalPreferred.toLowerCase();
     
-    return skillsChanged || locationsChanged;
+    return skillsChanged || locationsChanged || preferredChanged;
+  };
+
+  const formatTimestamp = (date: Date): string => {
+    const now = new Date();
+    const diffSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffSeconds < 10) return 'Updated just now';
+    if (diffSeconds < 60) return `Updated ${diffSeconds}s ago`;
+    if (diffSeconds < 3600) return `Updated ${Math.floor(diffSeconds / 60)}m ago`;
+    return `Updated at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   };
 
   const validateFile = (selectedFile: File): boolean => {
@@ -711,7 +781,7 @@ export default function UploadPage() {
                     Adjust your skills and locations to get better matches
                   </p>
                 </div>
-                {hasUserChanges() && (
+                {(isDirty || hasAppliedChanges()) && (
                   <button
                     onClick={handleResetToCV}
                     className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
@@ -874,9 +944,51 @@ export default function UploadPage() {
 
             {/* Section 2: Top Matches */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">
-                Top matches
-              </h2>
+              <div className="flex items-start justify-between gap-4 mb-6">
+                <div className="flex-1">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-1">
+                    Top matches
+                  </h2>
+                  {updatedAt && (
+                    <p className="text-sm text-gray-500">
+                      {formatTimestamp(updatedAt)}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <button
+                    onClick={handleUpdateMatches}
+                    disabled={!isDirty || isUpdating || !result}
+                    className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all text-sm ${
+                      isDirty && !isUpdating
+                        ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    {isUpdating ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Updating…</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span>Update matches</span>
+                      </>
+                    )}
+                  </button>
+                  {isDirty && (
+                    <p className="text-xs text-gray-500 text-right">
+                      Update results to reflect your changes
+                    </p>
+                  )}
+                </div>
+              </div>
               <div className="grid gap-5">
                 {getAdjustedMatches().map((match) => {
                   const job = result.jobs.find(j => j.id === match.jobId);
@@ -888,7 +1000,7 @@ export default function UploadPage() {
                     return 'bg-gray-50 text-gray-700 border-gray-200';
                   };
 
-                  const isAdjusted = hasUserChanges();
+                  const isAdjusted = hasAppliedChanges();
 
                   return (
                     <div key={match.jobId} className="bg-white rounded-lg border border-gray-200 p-6 hover:border-gray-300 transition-colors">
