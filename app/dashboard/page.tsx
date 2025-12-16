@@ -7,47 +7,130 @@ import { SaveJobButton, MarkAppliedButton } from './actions';
 export default async function DashboardPage() {
   const session = await auth();
   const userId = session!.user.id;
+  const isTestUser = userId.startsWith('test-');
 
-  // Get stats
-  const [newJobsCount, appliedCount, cvProfile, recentMatches, followUpsDue] = await Promise.all([
-    // New jobs: matches where user hasn't seen the job yet
-    prisma.jobMatch.count({
-      where: {
-        userId,
-        job: {
-          seenJobs: {
-            none: {
-              userId,
+  // Show test mode banner for test users
+  if (isTestUser) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border-2 border-blue-200 p-8 text-center">
+          <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-3">Welcome to Test Mode!</h1>
+          <p className="text-lg text-gray-700 mb-6">
+            You're signed in as: <strong>{session?.user?.email || 'Test User'}</strong>
+          </p>
+          
+          <div className="bg-white rounded-lg p-6 mb-6 text-left">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">What you can do:</h2>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <svg className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <div>
+                  <p className="font-medium text-gray-900">Upload Your CV</p>
+                  <p className="text-sm text-gray-600">Test the CV parsing and job matching features</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <svg className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <div>
+                  <p className="font-medium text-gray-900">Browse the Interface</p>
+                  <p className="text-sm text-gray-600">Explore all dashboard pages and features</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <svg className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="font-medium text-gray-900">Limited Persistence</p>
+                  <p className="text-sm text-gray-600">Test accounts don't save data to the database</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/upload"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              Upload CV to Get Started
+            </Link>
+            <Link
+              href="/dashboard/matches"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              Browse Dashboard
+            </Link>
+          </div>
+
+          <div className="mt-6 p-4 bg-blue-100 border border-blue-300 rounded-lg">
+            <p className="text-sm text-blue-900">
+              <strong>💡 Note:</strong> To save data permanently, set up a database and use Google OAuth or email authentication.
+              See the <a href="https://github.com/alexandarmartin-KC/cvside" className="underline font-medium">GitHub repo</a> for setup instructions.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Real user with database - original code
+  try {
+    // Get stats
+    const [newJobsCount, appliedCount, cvProfile, recentMatches, followUpsDue] = await Promise.all([
+      // New jobs: matches where user hasn't seen the job yet
+      prisma.jobMatch.count({
+        where: {
+          userId,
+          job: {
+            seenJobs: {
+              none: {
+                userId,
+              },
             },
           },
         },
-      },
-    }),
-    // Applied jobs in active statuses
-    prisma.appliedJob.count({
-      where: {
-        userId,
-        status: {
-          in: ['APPLIED', 'INTERVIEW', 'OFFER'],
+      }),
+      // Applied jobs in active statuses
+      prisma.appliedJob.count({
+        where: {
+          userId,
+          status: {
+            in: ['APPLIED', 'INTERVIEW', 'OFFER'],
+          },
         },
-      },
-    }),
-    // CV Profile
-    prisma.cvProfile.findUnique({
-      where: { userId },
-    }),
-    // Top 3 new job matches
-    prisma.jobMatch.findMany({
-      where: { userId },
-      include: {
-        job: true,
-      },
-      orderBy: {
-        score: 'desc',
-      },
-      take: 3,
-    }),
-    // Follow-ups due: Applied > 10 days ago, status still APPLIED
+      }),
+      // CV Profile
+      prisma.cvProfile.findUnique({
+        where: { userId },
+      }),
+      // Top 3 new job matches
+      prisma.jobMatch.findMany({
+        where: { userId },
+        include: {
+          job: true,
+        },
+        orderBy: {
+          score: 'desc',
+        },
+        take: 3,
+      }),
+      // Follow-ups due: Applied > 10 days ago, status still APPLIED
     prisma.appliedJob.findMany({
       where: {
         userId,
@@ -212,6 +295,25 @@ export default async function DashboardPage() {
       )}
     </div>
   );
+  } catch (error) {
+    console.error('Dashboard error:', error);
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <h2 className="text-xl font-semibold text-red-900 mb-2">Database Connection Error</h2>
+          <p className="text-red-700 mb-4">
+            Unable to load dashboard data. This usually means the database isn't configured.
+          </p>
+          <Link
+            href="/upload"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700"
+          >
+            Try Upload Page Instead
+          </Link>
+        </div>
+      </div>
+    );
+  }
 }
 
 function StatCard({
