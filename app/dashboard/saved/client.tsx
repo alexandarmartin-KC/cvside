@@ -34,11 +34,19 @@ export function UnsaveJobButton({ savedJobId }: { savedJobId: string }) {
   );
 }
 
-export function MoveToAppliedButton({ savedJobId, jobId }: { savedJobId: string; jobId: string }) {
+export function MoveToAppliedButton({ 
+  savedJobId, 
+  jobId, 
+  isApplied 
+}: { 
+  savedJobId: string; 
+  jobId: string; 
+  isApplied: boolean;
+}) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  async function handleMoveToApplied() {
+  async function handleMarkApplied() {
     setLoading(true);
     try {
       const res = await fetch('/api/dashboard/jobs/apply', {
@@ -47,7 +55,6 @@ export function MoveToAppliedButton({ savedJobId, jobId }: { savedJobId: string;
         body: JSON.stringify({ jobId, status: 'APPLIED' }),
       });
       if (res.ok) {
-        // Job is now marked as applied, but still stays in saved jobs
         router.refresh();
       }
     } finally {
@@ -55,9 +62,37 @@ export function MoveToAppliedButton({ savedJobId, jobId }: { savedJobId: string;
     }
   }
 
+  async function handleUnmarkApplied() {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/dashboard/jobs/unapply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId }),
+      });
+      if (res.ok) {
+        router.refresh();
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (isApplied) {
+    return (
+      <button
+        onClick={handleUnmarkApplied}
+        disabled={loading}
+        className="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+      >
+        {loading ? 'Unmarking...' : 'Unmark as Applied'}
+      </button>
+    );
+  }
+
   return (
     <button
-      onClick={handleMoveToApplied}
+      onClick={handleMarkApplied}
       disabled={loading}
       className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
     >

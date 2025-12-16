@@ -54,6 +54,7 @@ export default async function SavedJobsPage() {
           {savedJobs.map((saved) => {
             const match = saved.job.jobMatches[0];
             const appliedAt = appliedJobsMap.get(saved.job.id);
+            const isApplied = !!appliedAt;
             return (
               <JobCard
                 key={saved.id}
@@ -63,7 +64,11 @@ export default async function SavedJobsPage() {
                 appliedAt={appliedAt}
                 actions={
                   <>
-                    <MoveToAppliedButton savedJobId={saved.id} jobId={saved.job.id} />
+                    <MoveToAppliedButton 
+                      savedJobId={saved.id} 
+                      jobId={saved.job.id} 
+                      isApplied={isApplied}
+                    />
                     <UnsaveJobButton savedJobId={saved.id} />
                   </>
                 }
