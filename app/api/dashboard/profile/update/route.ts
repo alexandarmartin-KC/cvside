@@ -8,15 +8,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { skills, locations, preferredLocation } = await req.json();
+  const { name, title, summary, workPreference } = await req.json();
 
   try {
     await prisma.cvProfile.update({
       where: { userId: session.user.id },
       data: {
-        skills,
-        locations,
-        preferredLocation,
+        name,
+        title,
+        summary,
+        workPreference,
         updatedAt: new Date(),
       },
     });

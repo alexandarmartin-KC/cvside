@@ -2,232 +2,247 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 type CvProfile = {
   id: string;
   name: string | null;
   title: string | null;
-  seniority: string | null;
   summary: string | null;
-  skills: string[];
-  locations: string[];
-  preferredLocation: string | null;
+  workPreference: string | null;
+  cvFileName: string | null;
+  cvUploadedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 export function ProfileForm({ profile }: { profile: CvProfile }) {
-  const [skills, setSkills] = useState<string[]>(profile.skills);
-  const [locations, setLocations] = useState<string[]>(profile.locations);
-  const [preferredLocation, setPreferredLocation] = useState(profile.preferredLocation || '');
-  const [skillInput, setSkillInput] = useState('');
-  const [locationInput, setLocationInput] = useState('');
+  const [name, setName] = useState(profile.name || '');
+  const [title, setTitle] = useState(profile.title || '');
+  const [summary, setSummary] = useState(profile.summary || '');
+  const [workPreference, setWorkPreference] = useState(profile.workPreference || 'ANY');
   const [loading, setLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
   const router = useRouter();
-
-  function handleAddSkill() {
-    const trimmed = skillInput.trim();
-    if (trimmed && !skills.includes(trimmed)) {
-      setSkills([...skills, trimmed]);
-      setSkillInput('');
-    }
-  }
-
-  function handleRemoveSkill(skill: string) {
-    setSkills(skills.filter((s) => s !== skill));
-  }
-
-  function handleAddLocation() {
-    const trimmed = locationInput.trim();
-    if (trimmed && !locations.includes(trimmed)) {
-      setLocations([...locations, trimmed]);
-      setLocationInput('');
-    }
-  }
-
-  function handleRemoveLocation(location: string) {
-    setLocations(locations.filter((l) => l !== location));
-  }
 
   async function handleSave() {
     setLoading(true);
+    setSaved(false);
     try {
       const res = await fetch('/api/dashboard/profile/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          skills,
-          locations,
-          preferredLocation,
+          name,
+          title,
+          summary,
+          workPreference,
         }),
       });
       if (res.ok) {
+        setSaved(true);
         router.refresh();
-        alert('Profile updated successfully!');
+        setTimeout(() => setSaved(false), 3000);
+      } else {
+        alert('Failed to save changes');
       }
     } finally {
       setLoading(false);
     }
   }
 
+  const formatDate = (date: Date | null) => {
+    if (!date) return 'Unknown';
+    return new Intl.DateTimeFormat('da-DK', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }).format(new Date(date));
+  };
+
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
-      {/* Basic Info */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-6">
+      {/* Card 1: Standard Information */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-1">Standard Information</h2>
+        <p className="text-sm text-gray-500 mb-6">
+          These details are used as your base profile for job matching.
+        </p>
+
+        <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Full Name
+            </label>
             <input
               type="text"
-              value={profile.name || ''}
-              disabled
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Current Role/Title
+            </label>
             <input
               type="text"
-              value={profile.title || ''}
-              disabled
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Senior Frontend Developer"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Summary <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <textarea
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              placeholder="Brief professional summary..."
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
         </div>
-      </div>
 
-      {/* Skills */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Skills</h3>
-        <div className="flex gap-2 mb-3">
-          <input
-            type="text"
-            value={skillInput}
-            onChange={(e) => setSkillInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSkill())}
-            placeholder="Add a skill..."
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
+        <div className="mt-6 flex items-center gap-3">
           <button
-            onClick={handleAddSkill}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            onClick={handleSave}
+            disabled={loading}
+            className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
-            Add
+            {loading ? 'Saving...' : 'Save Changes'}
           </button>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {skills.map((skill) => (
-            <span
-              key={skill}
-              className="px-3 py-1.5 bg-blue-100 text-blue-800 rounded-lg flex items-center gap-2"
-            >
-              {skill}
-              <button
-                onClick={() => handleRemoveSkill(skill)}
-                className="text-blue-600 hover:text-blue-800"
-              >
-                ×
-              </button>
+          {saved && (
+            <span className="text-sm text-green-600 flex items-center gap-1">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Saved
             </span>
-          ))}
+          )}
         </div>
       </div>
 
-      {/* Locations */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Locations</h3>
-        <div className="flex gap-2 mb-3">
-          <input
-            type="text"
-            value={locationInput}
-            onChange={(e) => setLocationInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddLocation())}
-            placeholder="Add a location..."
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-          <button
-            onClick={handleAddLocation}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Add
-          </button>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {locations.map((location) => (
-            <span
-              key={location}
-              className="px-3 py-1.5 bg-purple-100 text-purple-800 rounded-lg flex items-center gap-2"
-            >
-              {location}
-              <button
-                onClick={() => handleRemoveLocation(location)}
-                className="text-purple-600 hover:text-purple-800"
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
-      </div>
+      {/* Card 2: Base CV */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-1">Base CV</h2>
+        <p className="text-sm text-gray-500 mb-6">
+          This CV is used to generate your base profile and match jobs.
+        </p>
 
-      {/* Preferred Location */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Preferred Location
-        </label>
-        <select
-          value={preferredLocation}
-          onChange={(e) => setPreferredLocation(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        {profile.cvFileName ? (
+          <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="flex items-start gap-3">
+              <svg className="w-10 h-10 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <div className="flex-1">
+                <p className="font-medium text-gray-900">{profile.cvFileName}</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Uploaded {formatDate(profile.cvUploadedAt)}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-lg p-4 mb-4 text-center">
+            <p className="text-gray-500">No CV file information available</p>
+          </div>
+        )}
+
+        <Link
+          href="/upload"
+          className="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
         >
-          <option value="">Select preferred location</option>
-          {locations.map((location) => (
-            <option key={location} value={location}>
-              {location}
-            </option>
-          ))}
-        </select>
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+          Replace CV
+        </Link>
+        <p className="text-xs text-gray-500 mt-2">
+          Uploading a new CV will update your base profile.
+        </p>
       </div>
 
-      {/* Save Button */}
-      <div className="pt-4 border-t border-gray-200">
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-        >
-          {loading ? 'Saving...' : 'Save Changes'}
-        </button>
+      {/* Card 3: Work Preference */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-1">Work Preference</h2>
+        <p className="text-sm text-gray-500 mb-6">
+          Choose what types of roles you want to see.
+        </p>
+
+        <div className="space-y-3">
+          <label className="flex items-start gap-3 p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
+            <input
+              type="radio"
+              name="workPreference"
+              value="ANY"
+              checked={workPreference === 'ANY'}
+              onChange={(e) => setWorkPreference(e.target.value)}
+              className="mt-1 w-4 h-4 text-blue-600"
+            />
+            <div>
+              <div className="font-medium text-gray-900">Open to all</div>
+              <div className="text-sm text-gray-500">Show me all types of roles</div>
+            </div>
+          </label>
+
+          <label className="flex items-start gap-3 p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
+            <input
+              type="radio"
+              name="workPreference"
+              value="REMOTE"
+              checked={workPreference === 'REMOTE'}
+              onChange={(e) => setWorkPreference(e.target.value)}
+              className="mt-1 w-4 h-4 text-blue-600"
+            />
+            <div>
+              <div className="font-medium text-gray-900">Remote only</div>
+              <div className="text-sm text-gray-500">Only show fully remote positions</div>
+            </div>
+          </label>
+
+          <label className="flex items-start gap-3 p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
+            <input
+              type="radio"
+              name="workPreference"
+              value="HYBRID"
+              checked={workPreference === 'HYBRID'}
+              onChange={(e) => setWorkPreference(e.target.value)}
+              className="mt-1 w-4 h-4 text-blue-600"
+            />
+            <div>
+              <div className="font-medium text-gray-900">Hybrid only</div>
+              <div className="text-sm text-gray-500">Combination of office and remote work</div>
+            </div>
+          </label>
+
+          <label className="flex items-start gap-3 p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
+            <input
+              type="radio"
+              name="workPreference"
+              value="ONSITE"
+              checked={workPreference === 'ONSITE'}
+              onChange={(e) => setWorkPreference(e.target.value)}
+              className="mt-1 w-4 h-4 text-blue-600"
+            />
+            <div>
+              <div className="font-medium text-gray-900">On-site only</div>
+              <div className="text-sm text-gray-500">Full-time office-based roles</div>
+            </div>
+          </label>
+        </div>
+
+        <p className="text-xs text-gray-500 mt-4">
+          This preference is saved when you click "Save Changes" above.
+        </p>
       </div>
     </div>
-  );
-}
-
-export function RecomputeMatchesButton({ userId }: { userId: string }) {
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
-
-  async function handleRecompute() {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/dashboard/jobs/refresh', {
-        method: 'POST',
-      });
-      if (res.ok) {
-        router.refresh();
-        alert('Matches recomputed successfully!');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <button
-      onClick={handleRecompute}
-      disabled={loading}
-      className="px-4 py-2 text-sm bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
-    >
-      {loading ? 'Recomputing...' : 'Recompute Matches'}
-    </button>
   );
 }
