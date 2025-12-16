@@ -75,6 +75,43 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Articles Section */}
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-3">
+            Job Search Insights
+          </h2>
+          <p className="text-center text-gray-600 mb-8 max-w-2xl mx-auto">
+            Practical advice to improve your CV, understand what recruiters look for, and get more interviews
+          </p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {articles.map((article) => (
+              <Link
+                key={article.slug}
+                href={`/articles/${article.slug}`}
+                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-lg hover:border-blue-300 transition-all group"
+              >
+                <div className="flex flex-col h-full">
+                  <h3 className="font-semibold text-gray-900 mb-3 leading-snug group-hover:text-blue-600 transition-colors">
+                    {article.title}
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4 flex-grow line-clamp-2 overflow-hidden" style={{ maxHeight: '2.5rem' }}>
+                    {article.excerpt}
+                  </p>
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                    <span className="text-xs text-gray-500">{article.readTime}</span>
+                    <span className="text-sm text-blue-600 font-medium group-hover:text-blue-700 flex items-center">
+                      Read article
+                      <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
         {/* Testimonials Section */}
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">
@@ -146,43 +183,6 @@ export default function Home() {
                 "Love how it ranks jobs by match percentage. Made my job search so much more focused and efficient. Highly recommend!"
               </p>
             </div>
-          </div>
-        </div>
-
-        {/* Articles Section */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-3">
-            Job Search Insights
-          </h2>
-          <p className="text-center text-gray-600 mb-8 max-w-2xl mx-auto">
-            Practical advice to improve your CV, understand what recruiters look for, and get more interviews
-          </p>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {articles.map((article) => (
-              <Link
-                key={article.slug}
-                href={`/articles/${article.slug}`}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-lg hover:border-blue-300 transition-all group"
-              >
-                <div className="flex flex-col h-full">
-                  <h3 className="font-semibold text-gray-900 mb-3 leading-snug group-hover:text-blue-600 transition-colors">
-                    {article.title}
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-4 flex-grow line-clamp-2 overflow-hidden" style={{ maxHeight: '2.5rem' }}>
-                    {article.excerpt}
-                  </p>
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                    <span className="text-xs text-gray-500">{article.readTime}</span>
-                    <span className="text-sm text-blue-600 font-medium group-hover:text-blue-700 flex items-center">
-                      Read article
-                      <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
           </div>
         </div>
 
