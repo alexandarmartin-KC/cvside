@@ -499,10 +499,12 @@ export default function UploadPage() {
                 text-base font-semibold text-white
                 rounded-lg 
                 transition-all duration-200 
-                focus:outline-none focus:ring-4 focus:ring-blue-300
-                ${loading || !file || !!result
-                  ? 'bg-gray-300 cursor-not-allowed' 
-                  : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 active:from-blue-800 active:to-blue-900 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
+                focus:outline-none focus:ring-4
+                ${result
+                  ? 'bg-green-600 cursor-default shadow-lg focus:ring-green-300'
+                  : loading || !file
+                  ? 'bg-gray-300 cursor-not-allowed focus:ring-blue-300' 
+                  : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 active:from-blue-800 active:to-blue-900 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 focus:ring-blue-300'
                 }
               `}
             >
