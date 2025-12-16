@@ -643,8 +643,8 @@ export default function UploadPage() {
                       <span className="text-sm font-medium">4</span>
                     )}
                   </div>
-                  <span className={`text-xs text-center ${currentStep >= 4 ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>
-                    Matching jobs
+                  <span className={`text-xs text-center ${currentStep >= 4 ? 'text-green-600 font-semibold' : 'text-gray-400'}`}>
+                    {currentStep >= 4 ? 'Done' : 'Matching jobs'}
                   </span>
                 </div>
               </div>
@@ -945,56 +945,59 @@ export default function UploadPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Update Matches Button */}
+                <div className="pt-6 border-t border-gray-100">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500">
+                        Apply your added skills and locations to refresh results.
+                      </p>
+                      {updatedAt && !isDirty && (
+                        <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          {formatTimestamp(updatedAt)}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleUpdateMatches}
+                      disabled={!isDirty || isUpdating || !result}
+                      className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 h-11 rounded-lg font-semibold transition-all text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                        isDirty && !isUpdating
+                          ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 shadow-md hover:shadow-lg'
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      {isUpdating ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>Updating…</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          <span>Update matches</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Section 2: Top Matches */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-start justify-between gap-4 mb-6">
-                <div className="flex-1">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-1">
-                    Top matches
-                  </h2>
-                  {updatedAt && (
-                    <p className="text-sm text-gray-500">
-                      {formatTimestamp(updatedAt)}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <button
-                    onClick={handleUpdateMatches}
-                    disabled={!isDirty || isUpdating || !result}
-                    className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all text-sm ${
-                      isDirty && !isUpdating
-                        ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
-                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    }`}
-                  >
-                    {isUpdating ? (
-                      <>
-                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span>Updating…</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        <span>Update matches</span>
-                      </>
-                    )}
-                  </button>
-                  {isDirty && (
-                    <p className="text-xs text-gray-500 text-right">
-                      Update results to reflect your changes
-                    </p>
-                  )}
-                </div>
-              </div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                Top matches
+              </h2>
               <div className="grid gap-5">
                 {getAdjustedMatches().map((match) => {
                   const job = result.jobs.find(j => j.id === match.jobId);
