@@ -23,6 +23,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Job ID is required' }, { status: 400 });
     }
 
+    // Ensure user exists in database (for test accounts)
+    let dbUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+    });
+
+    if (!dbUser && session.user.email) {
+      // Create user if doesn't exist (test accounts)
+      dbUser = await prisma.user.create({
+        data: {
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.name || session.user.email.split('@')[0],
+        },
+      });
+    }
+
+    if (!dbUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     // Create or find the job in the database
     const dbJob = await prisma.job.upsert({
       where: { 
