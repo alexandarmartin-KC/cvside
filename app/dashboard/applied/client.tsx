@@ -110,7 +110,7 @@ export function AppliedJobCard({
             <div>
               <p className="text-xs font-medium text-gray-700 mb-1">Description:</p>
               <div className="text-xs text-gray-600 max-h-48 overflow-y-auto whitespace-pre-wrap">
-                {job.description}
+                {job.description || <span className="text-gray-400 italic">Full description not available</span>}
               </div>
             </div>
 
