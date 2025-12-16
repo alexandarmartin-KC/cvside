@@ -37,11 +37,6 @@ export function JobCard({ job, score, reasons, isNew, appliedAt, actions }: JobC
               </span>
             )}
           </div>
-          {appliedAt && (
-            <div className="text-xs text-green-600 font-medium mb-1">
-              ✓ Applied {formatDate(appliedAt)}
-            </div>
-          )}
           <p className="text-gray-600 text-sm mb-2">{job.company}</p>
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <span className="flex items-center gap-1 text-gray-500">
@@ -90,7 +85,17 @@ export function JobCard({ job, score, reasons, isNew, appliedAt, actions }: JobC
       {/* Reasons */}
       {reasons && reasons.length > 0 && (
         <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
-          <div className="text-sm font-medium text-green-900 mb-2">Why it matches:</div>
+          <div className="flex items-start justify-between gap-4 mb-3">
+            <div className="text-sm font-medium text-green-900">Why it matches:</div>
+            {appliedAt && (
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-green-300 bg-white/80 px-3 py-1 text-xs font-medium text-green-700 shrink-0">
+                <svg className="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Applied · {formatDate(appliedAt)}
+              </div>
+            )}
+          </div>
           <ul className="space-y-1">
             {reasons.slice(0, 3).map((reason, idx) => (
               <li key={idx} className="text-sm text-green-800 flex items-start gap-2">
