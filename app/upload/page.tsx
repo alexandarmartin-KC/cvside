@@ -1,14 +1,17 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 
 export default function UploadPage() {
+  const { data: session, status: sessionStatus } = useSession();
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [profileSaved, setProfileSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<{
     cvProfile: {
@@ -176,6 +179,37 @@ export default function UploadPage() {
     
     setUpdatedAt(new Date());
     setIsUpdating(false);
+
+    // Save to database if logged in
+    if (session) {
+      await saveCvProfile();
+    }
+  };
+
+  // Save CV profile to database
+  const saveCvProfile = async () => {
+    if (!session) return;
+
+    try {
+      const response = await fetch('/api/cv/save-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          skills: manualSkills,
+          locations: manualLocations,
+          preferredLocation,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.saved) {
+          setProfileSaved(true);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to save CV profile:', error);
+    }
   };
 
   // Calculate adjusted scores using APPLIED state
@@ -345,6 +379,11 @@ export default function UploadPage() {
       setCurrentStep(4); // Step 4: Matching jobs
       setResult(data);
       setStatus('Upload successful!');
+
+      // Auto-save to database if logged in
+      if (session && data.cvProfile) {
+        await saveCvProfile();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setStatus('');
@@ -362,12 +401,22 @@ export default function UploadPage() {
           <div className="text-lg font-semibold text-gray-900">
             CV Matcher
           </div>
-          <a 
-            href="/" 
-            className="text-sm text-gray-600 hover:text-gray-900 transition-colors focus:outline-none focus:underline"
-          >
-            ← Back
-          </a>
+          <div className="flex items-center gap-4">
+            {session && (
+              <a
+                href="/dashboard"
+                className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                Go to Dashboard →
+              </a>
+            )}
+            <a 
+              href="/" 
+              className="text-sm text-gray-600 hover:text-gray-900 transition-colors focus:outline-none focus:underline"
+            >
+              ← Back
+            </a>
+          </div>
         </div>
       </header>
 
@@ -709,6 +758,66 @@ export default function UploadPage() {
         {/* Results Section */}
         {result && (
           <div className="mt-12 space-y-8">
+            {/* Logged-in user banner */}
+            {session && profileSaved && (
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200 p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      Profile Saved Successfully!
+                    </h3>
+                    <p className="text-gray-700 mb-4">
+                      Your CV profile has been saved to your account. You can now track your job applications, save jobs, and get personalized matches in your dashboard.
+                    </p>
+                    <a
+                      href="/dashboard"
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
+                    >
+                      <span>Open Dashboard</span>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Not logged in banner */}
+            {!session && (
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <svg className="w-10 h-10 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      Want to Save Your Progress?
+                    </h3>
+                    <p className="text-gray-700 mb-4">
+                      Sign in to save your CV profile, track applications, and get personalized job matches in your dashboard.
+                    </p>
+                    <a
+                      href="/login"
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
+                    >
+                      <span>Sign In</span>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* What We Understood From Your CV */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="px-6 py-5 border-b border-gray-100">

@@ -1,11 +1,11 @@
-import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { protectRoute } from '@/lib/auth';
+import prisma from '@/lib/prisma';
 import { JobCard } from '@/components/JobCard';
 import { UnsaveJobButton, MoveToAppliedButton } from './client';
 
 export default async function SavedJobsPage() {
-  const session = await auth();
-  const userId = session!.user.id;
+  const session = await protectRoute();
+  const userId = session.user.id;
 
   const savedJobs = await prisma.savedJob.findMany({
     where: { userId },
