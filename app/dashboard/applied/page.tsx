@@ -10,7 +10,18 @@ export default async function AppliedJobsPage() {
   const appliedJobs = await prisma.appliedJob.findMany({
     where: { userId },
     include: {
-      job: true,
+      job: {
+        select: {
+          id: true,
+          title: true,
+          company: true,
+          location: true,
+          remote: true,
+          description: true,
+          skills: true,
+          sourceUrl: true,
+        },
+      },
     },
     orderBy: {
       updatedAt: 'desc',

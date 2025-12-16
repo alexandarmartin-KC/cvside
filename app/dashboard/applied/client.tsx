@@ -15,6 +15,10 @@ type AppliedJobWithJob = {
     title: string;
     company: string;
     location: string;
+    remote: boolean;
+    description: string;
+    skills: string[];
+    sourceUrl: string | null;
   };
 };
 
@@ -26,23 +30,107 @@ export function AppliedJobCard({
   job: AppliedJobWithJob['job'];
 }) {
   const [showModal, setShowModal] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <>
-      <div
-        onClick={() => setShowModal(true)}
-        className="bg-white p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer"
-      >
-        <h4 className="font-semibold text-sm text-gray-900 mb-1">{job.title}</h4>
-        <p className="text-xs text-gray-600 mb-2">{job.company}</p>
-        {appliedJob.appliedAt && (
-          <p className="text-xs text-gray-500">
-            {new Date(appliedJob.appliedAt).toLocaleDateString()}
-          </p>
-        )}
-        {appliedJob.notes && (
-          <p className="text-xs text-gray-600 mt-2 line-clamp-2">{appliedJob.notes}</p>
-        )}
+      <div className="bg-white p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-sm transition-all">
+        <div onClick={() => setShowModal(true)} className="cursor-pointer">
+          <h4 className="font-semibold text-sm text-gray-900 mb-1">{job.title}</h4>
+          <p className="text-xs text-gray-600 mb-2">{job.company}</p>
+          {appliedJob.appliedAt && (
+            <p className="text-xs text-gray-500">
+              {new Date(appliedJob.appliedAt).toLocaleDateString()}
+            </p>
+          )}
+          {appliedJob.notes && (
+            <p className="text-xs text-gray-600 mt-2 line-clamp-2">{appliedJob.notes}</p>
+          )}
+        </div>
+
+        {/* Read Description Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setExpanded(!expanded);
+          }}
+          className="mt-2 w-full text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center justify-center gap-1"
+          aria-expanded={expanded}
+        >
+          Read full job description
+          <svg
+            className={`w-3 h-3 transition-transform ${expanded ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {/* Expanded Description */}
+        <div
+          className={`overflow-hidden transition-all duration-300 ${
+            expanded ? 'max-h-96 opacity-100 mt-3' : 'max-h-0 opacity-0'
+          }`}
+        >
+          <div className="border-t border-gray-200 pt-3 space-y-3">
+            {/* Location & Remote */}
+            <div className="flex items-center gap-2 text-xs text-gray-600">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              {job.location}
+              {job.remote && (
+                <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+                  Remote
+                </span>
+              )}
+            </div>
+
+            {/* Skills */}
+            {job.skills && job.skills.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-gray-700 mb-1">Skills:</p>
+                <div className="flex flex-wrap gap-1">
+                  {job.skills.map((skill) => (
+                    <span
+                      key={skill}
+                      className="px-1.5 py-0.5 bg-gray-100 text-gray-700 text-xs rounded"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Description */}
+            <div>
+              <p className="text-xs font-medium text-gray-700 mb-1">Description:</p>
+              <div className="text-xs text-gray-600 max-h-48 overflow-y-auto whitespace-pre-wrap">
+                {job.description}
+              </div>
+            </div>
+
+            {/* Original Posting Link */}
+            {job.sourceUrl && (
+              <a
+                href={job.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                Open original posting
+              </a>
+            )}
+          </div>
+        </div>
       </div>
 
       {showModal && (
