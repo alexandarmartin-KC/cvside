@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import LoginButton from './LoginButton';
 
+export const dynamic = 'force-dynamic';
+
 export default async function LoginPage() {
   let session = null;
   try {
