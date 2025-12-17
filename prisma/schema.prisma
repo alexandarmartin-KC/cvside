@@ -44,15 +44,17 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
+  passwordHash  String?   // For custom password auth
   accounts      Account[]
   sessions      Session[]
 
   // App relations
-  cvProfile    CvProfile?
-  jobMatches   JobMatch[]
-  savedJobs    SavedJob[]
-  appliedJobs  AppliedJob[]
-  seenJobs     SeenJob[]
+  cvProfile       CvProfile?
+  jobMatches      JobMatch[]
+  savedJobs       SavedJob[]
+  appliedJobs     AppliedJob[]
+  seenJobs        SeenJob[]
+  resetTokens     PasswordResetToken[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -64,6 +66,17 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  
+  @@index([userId])
 }
 
 // Application Models

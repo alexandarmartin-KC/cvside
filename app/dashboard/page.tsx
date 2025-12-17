@@ -1,17 +1,11 @@
-import { auth } from '@/lib/auth';
+import { requireUser } from '@/lib/auth-session';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { ProfileForm } from './profile-form';
-import { redirect } from 'next/navigation';
 
 export default async function DashboardPage() {
-  const session = await auth();
-  if (!session?.user) {
-    return <div>Not authenticated</div>;
-  }
-  
-  const userId = session.user.id;
-  const isTestUser = userId.startsWith('test-');
+  const user = await requireUser();
+  const userId = user.id;
 
   // Fetch CV profile
   let cvProfile = null;
@@ -27,11 +21,8 @@ export default async function DashboardPage() {
       }
     });
   } catch (dbError) {
-    if (isTestUser) {
-      console.log('Test user, database not available');
-    } else {
-      throw dbError;
-    }
+    console.error('Error fetching CV profile:', dbError);
+    throw dbError;
   }
 
   // If no CV profile exists, show welcome message
@@ -74,14 +65,10 @@ export default async function DashboardPage() {
       prisma.appliedJob.count({ where: { userId } }),
     ]);
   } catch (dbError) {
-    if (isTestUser) {
-      console.log('Test user, using default counts');
-      matchCount = 0;
-      savedCount = 0;
-      appliedCount = 0;
-    } else {
-      throw dbError;
-    }
+    console.error('Error fetching job counts:', dbError);
+    matchCount = 0;
+    savedCount = 0;
+    appliedCount = 0;
   }
 
   const formatDate = (date: Date | null) => {

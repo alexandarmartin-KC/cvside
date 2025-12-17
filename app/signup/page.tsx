@@ -4,9 +4,10 @@ import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
+    name: '',
     email: '',
     password: '',
   });
@@ -19,7 +20,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -28,12 +29,12 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Failed to login');
+        setError(data.error || 'Failed to create account');
         setLoading(false);
         return;
       }
 
-      // Redirect to dashboard after successful login
+      // Redirect to dashboard after successful signup
       router.push('/dashboard');
       router.refresh();
     } catch (err) {
@@ -53,8 +54,8 @@ export default function LoginPage() {
             </div>
             <span className="text-xl font-bold text-gray-900">CV Matcher</span>
           </Link>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back</h2>
-          <p className="text-gray-600">Sign in to your account to continue</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Create your account</h2>
+          <p className="text-gray-600">Start matching your CV with jobs today</p>
         </div>
 
         {/* Form */}
@@ -65,6 +66,21 @@ export default function LoginPage() {
                 {error}
               </div>
             )}
+
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                Name (optional)
+              </label>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                placeholder="John Doe"
+              />
+            </div>
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -95,13 +111,9 @@ export default function LoginPage() {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                 placeholder="••••••••"
+                minLength={8}
               />
-            </div>
-
-            <div className="flex items-center justify-end">
-              <Link href="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-500">
-                Forgot password?
-              </Link>
+              <p className="mt-1 text-xs text-gray-500">Minimum 8 characters</p>
             </div>
 
             <button
@@ -109,15 +121,15 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold py-3 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Signing in...' : 'Sign in'}
+              {loading ? 'Creating account...' : 'Create account'}
             </button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">
-                Create account
+              Already have an account?{' '}
+              <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+                Sign in
               </Link>
             </p>
           </div>

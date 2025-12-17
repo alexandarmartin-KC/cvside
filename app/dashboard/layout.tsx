@@ -1,19 +1,13 @@
-import { auth } from '@/lib/auth';
+import { requireUser } from '@/lib/auth-session';
+import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { NavLink, MobileNavLink } from './nav-links';
 
 async function handleSignOut() {
   'use server';
-  const { cookies } = await import('next/headers');
-  
-  // Clear NextAuth session cookies
-  const cookieStore = await cookies();
-  cookieStore.delete('next-auth.session-token');
-  cookieStore.delete('__Secure-next-auth.session-token');
-  cookieStore.delete('next-auth.csrf-token');
-  cookieStore.delete('__Host-next-auth.csrf-token');
-  
+  const { signOut } = await import('@/lib/auth-session');
+  await signOut();
   redirect('/');
 }
 
@@ -22,10 +16,23 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
+  // Require authentication
+  const user = await requireUser();
 
-  if (!session?.user) {
-    redirect('/login');
+  // Check if user has a CV profile
+  let cvProfile = null;
+  try {
+    cvProfile = await prisma.cvProfile.findUnique({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+  } catch (error) {
+    console.error('Error checking CV profile:', error);
+  }
+
+  // If no CV profile, redirect to upload
+  if (!cvProfile) {
+    redirect('/upload');
   }
 
   return (
@@ -45,16 +52,16 @@ export default async function DashboardLayout({
             {/* User Menu */}
             <div className="flex items-center gap-4">
               <div className="hidden sm:flex items-center gap-3">
-                {session.user.image && (
+                {user.image && (
                   <img
-                    src={session.user.image}
-                    alt={session.user.name || 'User'}
+                    src={user.image}
+                    alt={user.name || 'User'}
                     className="w-8 h-8 rounded-full"
                   />
                 )}
                 <div className="text-sm">
-                  <div className="font-medium text-gray-900">{session.user.name}</div>
-                  <div className="text-gray-500 text-xs">{session.user.email}</div>
+                  <div className="font-medium text-gray-900">{user.name || 'User'}</div>
+                  <div className="text-gray-500 text-xs">{user.email}</div>
                 </div>
               </div>
               <form action={handleSignOut}>
