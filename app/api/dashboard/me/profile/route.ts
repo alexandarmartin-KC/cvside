@@ -31,8 +31,6 @@ export async function GET() {
         skills: true,
         locations: true,
         preferredLocation: true,
-        cvFileName: true,
-        cvUploadedAt: true,
       },
     });
 

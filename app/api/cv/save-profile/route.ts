@@ -51,8 +51,6 @@ export async function POST(req: NextRequest) {
         skills,
         locations,
         preferredLocation: preferredLocation || (locations.length > 0 ? locations[0] : null),
-        cvFileName,
-        cvUploadedAt: new Date(),
       },
       update: {
         name,
@@ -62,8 +60,6 @@ export async function POST(req: NextRequest) {
         skills,
         locations,
         preferredLocation: preferredLocation || (locations.length > 0 ? locations[0] : null),
-        cvFileName,
-        cvUploadedAt: new Date(),
         updatedAt: new Date(),
       },
     });

@@ -93,13 +93,6 @@ model CvProfile {
   locations         String[] // Array of strings
   preferredLocation String?
   
-  // Work preference
-  workPreference    String?  @default("ANY") // "ANY" | "REMOTE" | "HYBRID" | "ONSITE"
-  
-  // CV file info
-  cvFileName        String?
-  cvUploadedAt      DateTime?
-  
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
