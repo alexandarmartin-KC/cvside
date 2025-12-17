@@ -943,10 +943,10 @@ export default function UploadPage() {
                   </div>
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      Want to Save Your Progress?
+                      Get a Complete Overview of Your Job Search
                     </h3>
                     <p className="text-gray-700 mb-4">
-                      Sign in to save your CV profile, track applications, and get personalized job matches in your dashboard.
+                      Sign in to save jobs, access your full dashboard, track applications, and improve your job search with CV and cover letter tools.
                     </p>
                     <a
                       href="/login"
