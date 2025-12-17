@@ -1,6 +1,7 @@
-import { auth, signOut } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 export async function POST() {
   const session = await auth();
@@ -14,8 +15,12 @@ export async function POST() {
       where: { id: session.user.id },
     });
 
-    // Sign out the user
-    await signOut({ redirect: false });
+    // Clear session cookies
+    const cookieStore = await cookies();
+    cookieStore.delete('next-auth.session-token');
+    cookieStore.delete('__Secure-next-auth.session-token');
+    cookieStore.delete('next-auth.csrf-token');
+    cookieStore.delete('__Host-next-auth.csrf-token');
 
     return NextResponse.json({ success: true });
   } catch (error) {

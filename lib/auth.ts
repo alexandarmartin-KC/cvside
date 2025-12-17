@@ -18,4 +18,5 @@ export async function protectRoute() {
   return session;
 }
 
-export { signIn, signOut } from 'next-auth/react';
+// Re-export client-side functions
+export { signIn } from 'next-auth/react';

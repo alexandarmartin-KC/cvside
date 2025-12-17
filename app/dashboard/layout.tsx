@@ -1,7 +1,21 @@
-import { auth, signOut } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { NavLink, MobileNavLink } from './nav-links';
+
+async function handleSignOut() {
+  'use server';
+  const { cookies } = await import('next/headers');
+  
+  // Clear NextAuth session cookies
+  const cookieStore = await cookies();
+  cookieStore.delete('next-auth.session-token');
+  cookieStore.delete('__Secure-next-auth.session-token');
+  cookieStore.delete('next-auth.csrf-token');
+  cookieStore.delete('__Host-next-auth.csrf-token');
+  
+  redirect('/');
+}
 
 export default async function DashboardLayout({
   children,
@@ -43,13 +57,7 @@ export default async function DashboardLayout({
                   <div className="text-gray-500 text-xs">{session.user.email}</div>
                 </div>
               </div>
-              <form
-                action={async () => {
-                  'use server';
-                  await signOut({ redirect: false });
-                  redirect('/');
-                }}
-              >
+              <form action={handleSignOut}>
                 <button
                   type="submit"
                   className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
