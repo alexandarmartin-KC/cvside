@@ -63,8 +63,16 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error('Signup error:', error);
+    
+    // More detailed error for debugging
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Detailed error:', errorMessage);
+    
     return NextResponse.json(
-      { error: 'Failed to create account' },
+      { 
+        error: 'Failed to create account',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      },
       { status: 500 }
     );
   }
