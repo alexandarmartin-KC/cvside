@@ -67,8 +67,8 @@ export default async function DashboardLayout({
         <aside className="hidden md:flex md:flex-shrink-0">
           <div className="w-64 bg-white border-r border-gray-200 min-h-screen">
             <nav className="px-4 py-6 space-y-1">
-              <NavLink href="/dashboard" icon="home">
-                Overview
+              <NavLink href="/dashboard" icon="user">
+                Dashboard
               </NavLink>
               <NavLink href="/dashboard/matches" icon="briefcase">
                 Job Matches
@@ -78,9 +78,6 @@ export default async function DashboardLayout({
               </NavLink>
               <NavLink href="/dashboard/applied" icon="list">
                 Applied Jobs
-              </NavLink>
-              <NavLink href="/dashboard/profile" icon="user">
-                CV & Preferences
               </NavLink>
               <NavLink href="/dashboard/insights" icon="chart">
                 Insights
@@ -95,7 +92,7 @@ export default async function DashboardLayout({
         {/* Mobile Bottom Nav */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-10">
           <div className="flex justify-around py-2">
-            <MobileNavLink href="/dashboard" icon="home" label="Overview" />
+            <MobileNavLink href="/dashboard" icon="user" label="Dashboard" />
             <MobileNavLink href="/dashboard/matches" icon="briefcase" label="Matches" />
             <MobileNavLink href="/dashboard/saved" icon="bookmark" label="Saved" />
             <MobileNavLink href="/dashboard/applied" icon="list" label="Applied" />
