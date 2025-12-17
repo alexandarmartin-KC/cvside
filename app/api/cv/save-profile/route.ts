@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth-session';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(req: NextRequest) {
   try {
@@ -74,8 +74,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, saved: true });
   } catch (error) {
     console.error('Error saving CV profile:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Detailed error:', errorMessage);
+    if (error instanceof Error && error.stack) {
+      console.error('Stack:', error.stack);
+    }
     return NextResponse.json(
-      { error: 'Failed to save CV profile' },
+      { error: 'Failed to save CV profile', details: errorMessage },
       { status: 500 }
     );
   }
