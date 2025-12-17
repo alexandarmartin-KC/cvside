@@ -78,13 +78,25 @@ export default function UploadPage() {
     const checkAuth = async () => {
       try {
         const response = await fetch('/api/auth/check-session');
-        setIsLoggedIn(response.ok);
+        const wasLoggedIn = isLoggedIn;
+        const nowLoggedIn = response.ok;
+        setIsLoggedIn(nowLoggedIn);
+        
+        // If user just logged in and has CV data, save it automatically
+        if (!wasLoggedIn && nowLoggedIn && result && !profileSaved) {
+          console.log('User just logged in with existing CV data - auto-saving profile');
+          await saveCvProfile(result);
+        }
       } catch {
         setIsLoggedIn(false);
       }
     };
     checkAuth();
-  }, []);
+    
+    // Re-check auth every 5 seconds in case user signs in from another tab
+    const interval = setInterval(checkAuth, 5000);
+    return () => clearInterval(interval);
+  }, [result, profileSaved]);
 
   // Initialize when result changes
   useEffect(() => {
