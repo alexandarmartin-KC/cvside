@@ -16,8 +16,10 @@ export async function GET() {
       select: {
         name: true,
         title: true,
-        cvFileName: true,
-        cvUploadedAt: true,
+        seniority: true,
+        summary: true,
+        skills: true,
+        locations: true,
         createdAt: true,
         updatedAt: true,
       }
