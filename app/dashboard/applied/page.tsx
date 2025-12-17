@@ -55,25 +55,6 @@ export default async function AppliedJobsPage() {
       </div>
     );
   }
-    where: { userId },
-    include: {
-      job: {
-        select: {
-          id: true,
-          title: true,
-          company: true,
-          location: true,
-          remote: true,
-          description: true,
-          skills: true,
-          sourceUrl: true,
-        },
-      },
-    },
-    orderBy: {
-      updatedAt: 'desc',
-    },
-  });
 
   const jobsByStatus: Record<AppliedJobStatus, typeof appliedJobs> = {
     SAVED: [],

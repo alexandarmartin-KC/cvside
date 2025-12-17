@@ -47,21 +47,6 @@ export default async function SavedJobsPage() {
       </div>
     );
   }
-    where: { userId },
-    include: {
-      job: {
-        include: {
-          jobMatches: {
-            where: { userId },
-            take: 1,
-          },
-        },
-      },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
 
   // Fetch applied jobs to show status
   const appliedJobs = await prisma.appliedJob.findMany({
