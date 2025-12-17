@@ -270,4 +270,5 @@ function formatWorkPref(pref: string): string {
     'REMOTE_ONLY': 'Remote only',
     'NO_REMOTE': 'No remote',
   };
-
+  return map[pref] || pref;
+}
