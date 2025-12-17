@@ -8,17 +8,20 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [cvProfile, setCvProfile] = useState<any>(null);
   const [pendingSave, setPendingSave] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadProfile = async () => {
       try {
+        setError(null);
+        
         // Check for pending CV data in localStorage
         const pendingData = localStorage.getItem('pendingCvData');
         
         if (pendingData) {
           try {
             const parsed = JSON.parse(pendingData);
-            console.log('Found pending CV data in localStorage, saving...');
+            console.log('Found pending CV data in localStorage:', parsed);
             setPendingSave(true);
             
             // Save it to the database
@@ -40,27 +43,36 @@ export default function ProfilePage() {
             if (response.ok) {
               console.log('Pending CV saved successfully');
               localStorage.removeItem('pendingCvData');
+              // Wait a moment for database to commit
+              await new Promise(resolve => setTimeout(resolve, 500));
             } else {
-              console.error('Failed to save pending CV:', await response.text());
+              const errorText = await response.text();
+              console.error('Failed to save pending CV:', errorText);
+              setError('Failed to save CV profile');
             }
           } catch (saveError) {
             console.error('Error saving pending CV:', saveError);
+            setError('Error saving CV profile');
           } finally {
             setPendingSave(false);
           }
         }
         
         // Fetch the saved profile from database
+        console.log('Fetching profile from database...');
         const profileResponse = await fetch('/api/dashboard/me/profile');
         if (profileResponse.ok) {
           const data = await profileResponse.json();
           console.log('Profile loaded:', data.profile);
           setCvProfile(data.profile);
         } else {
-          console.error('Failed to fetch profile:', await profileResponse.text());
+          const errorText = await profileResponse.text();
+          console.error('Failed to fetch profile:', errorText);
+          setError('Failed to load profile');
         }
       } catch (error) {
         console.error('Failed to load profile:', error);
+        setError('Failed to load profile');
       } finally {
         setLoading(false);
       }
@@ -89,6 +101,11 @@ export default function ProfilePage() {
     return (
       <div className="max-w-5xl mx-auto">
         <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
           <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -98,15 +115,27 @@ export default function ProfilePage() {
           <p className="text-gray-600 mb-6">
             Upload your CV to get started with job matching
           </p>
-          <a
-            href="/upload"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-            Upload Your CV
-          </a>
+          <div className="flex flex-col gap-3 items-center">
+            <a
+              href="/upload"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              Upload Your CV
+            </a>
+            <button
+              onClick={() => {
+                const data = localStorage.getItem('pendingCvData');
+                console.log('LocalStorage pendingCvData:', data);
+                alert('Check console for localStorage data');
+              }}
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              Debug: Check localStorage
+            </button>
+          </div>
         </div>
       </div>
     );
