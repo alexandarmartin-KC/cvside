@@ -53,7 +53,6 @@ export async function POST(req: NextRequest) {
         preferredLocation: preferredLocation || (locations.length > 0 ? locations[0] : null),
         cvFileName,
         cvUploadedAt: new Date(),
-        workPreference: 'ANY', // Default
       },
       update: {
         name,
