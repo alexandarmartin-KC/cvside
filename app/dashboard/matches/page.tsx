@@ -13,15 +13,16 @@ type SearchParams = {
 export default async function MatchesPage({
   searchParams,
 }: {
-  searchParams: SearchParams;
+  searchParams: Promise<SearchParams>;
 }) {
   const session = await auth();
   const userId = session!.user.id;
 
-  const location = searchParams.location || '';
-  const remoteOnly = searchParams.remote === 'true';
-  const minScore = parseInt(searchParams.minScore || '0');
-  const sortBy = searchParams.sort || 'score'; // 'score' or 'newest'
+  const params = await searchParams;
+  const location = params.location || '';
+  const remoteOnly = params.remote === 'true';
+  const minScore = parseInt(params.minScore || '0');
+  const sortBy = params.sort || 'score'; // 'score' or 'newest'
 
   // Build where clause
   const whereClause: any = {
