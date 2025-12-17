@@ -13,7 +13,7 @@ export default async function DashboardPage() {
   const userId = session.user.id;
   const isTestUser = userId.startsWith('test-');
 
-  // ENFORCE CV-FIRST FLOW: Fetch CV profile, redirect if missing
+  // Fetch CV profile
   let cvProfile = null;
   try {
     cvProfile = await prisma.cvProfile.findUnique({
@@ -28,15 +28,38 @@ export default async function DashboardPage() {
     });
   } catch (dbError) {
     if (isTestUser) {
-      console.log('Test user, database not available - redirecting to upload');
+      console.log('Test user, database not available');
     } else {
       throw dbError;
     }
   }
 
-  // REDIRECT if no CV profile exists
+  // If no CV profile exists, show welcome message
   if (!cvProfile) {
-    redirect('/upload');
+    return (
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to CV Matcher!</h1>
+          <p className="text-gray-600 mb-6">
+            To get started, upload your CV and we'll analyze it to find matching job opportunities for you.
+          </p>
+          <Link
+            href="/upload"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            Upload Your CV
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   // Fetch job counts
