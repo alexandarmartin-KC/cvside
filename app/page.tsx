@@ -8,9 +8,10 @@ export default async function Home() {
   let user = null;
   try {
     user = await getSessionUser();
+    console.log('Homepage - User check result:', user ? 'Logged in' : 'Not logged in');
   } catch (error) {
     console.error('Auth error on homepage:', error);
-    // Continue without user
+    user = null;
   }
 
   return (
@@ -30,7 +31,7 @@ export default async function Home() {
             </Link>
           ) : (
             <Link
-              href="/signup"
+              href="/login"
               className="inline-flex items-center px-6 py-2.5 bg-white border-2 border-gray-300 text-gray-700 font-medium rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
