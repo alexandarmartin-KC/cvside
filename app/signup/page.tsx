@@ -35,8 +35,8 @@ export default function SignupPage() {
       }
 
       // Redirect to dashboard after successful signup
-      router.push('/dashboard');
-      router.refresh();
+      // Use window.location to ensure cookie is sent with next request
+      window.location.href = '/dashboard';
     } catch (err) {
       setError('An error occurred. Please try again.');
       setLoading(false);
