@@ -18,17 +18,33 @@ export default async function Home() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-16 px-4">
       <div className="max-w-5xl mx-auto">
         {/* Top Bar with Login/Dashboard */}
-        <div className="flex justify-end mb-8">
+        <div className="flex justify-end mb-8 gap-3">
           {user ? (
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center px-6 py-2.5 bg-white border-2 border-blue-600 text-blue-600 font-medium rounded-lg hover:bg-blue-50 transition-all"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-              Go to Dashboard
-            </Link>
+            <>
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center px-6 py-2.5 bg-white border-2 border-blue-600 text-blue-600 font-medium rounded-lg hover:bg-blue-50 transition-all"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Go to Dashboard
+              </Link>
+              <form action={async () => {
+                'use server';
+                const { signOut } = await import('@/lib/auth-session');
+                const { redirect } = await import('next/navigation');
+                await signOut();
+                redirect('/');
+              }}>
+                <button
+                  type="submit"
+                  className="inline-flex items-center px-6 py-2.5 bg-white border-2 border-gray-300 text-gray-700 font-medium rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
+                >
+                  Sign Out
+                </button>
+              </form>
+            </>
           ) : (
             <Link
               href="/login"
