@@ -15,7 +15,12 @@ export function NavLink({
   primary?: boolean;
 }) {
   const pathname = usePathname();
-  const isActive = pathname === href;
+  
+  // Special handling for /dashboard/profile which is also the main /dashboard
+  let isActive = pathname === href;
+  if (href === '/dashboard/profile' && pathname === '/dashboard') {
+    isActive = true;
+  }
 
   // Build stable className without transitions on structural changes
   const baseClasses = 'flex items-center gap-3 px-4 py-2.5 rounded-lg group';
