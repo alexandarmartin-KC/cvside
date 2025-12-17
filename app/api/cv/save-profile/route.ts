@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from '@/lib/auth';
+import { getSessionUser } from '@/lib/auth-session';
 import prisma from '@/lib/prisma';
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession();
+    const user = await getSessionUser();
     
     // If not logged in, just return success without saving
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ success: true, saved: false });
     }
 
@@ -33,9 +33,9 @@ export async function POST(req: NextRequest) {
 
     // Upsert CV profile with all extracted data
     await prisma.cvProfile.upsert({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       create: {
-        userId: session.user.id,
+        userId: user.id,
         name,
         title,
         seniority,

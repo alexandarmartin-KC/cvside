@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 
 export default function UploadPage() {
-  const { data: session, status: sessionStatus } = useSession();
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -74,6 +73,19 @@ export default function UploadPage() {
     return true;
   };
 
+  // Check if user is logged in
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/check-session');
+        setIsLoggedIn(response.ok);
+      } catch {
+        setIsLoggedIn(false);
+      }
+    };
+    checkAuth();
+  }, []);
+
   // Initialize when result changes
   useEffect(() => {
     if (result?.cvProfile) {
@@ -98,11 +110,11 @@ export default function UploadPage() {
       setUpdatedAt(null);
 
       // Load saved jobs if user is authenticated
-      if (sessionStatus === 'authenticated') {
+      if (isLoggedIn) {
         loadSavedJobs();
       }
     }
-  }, [result, sessionStatus]);
+  }, [result, isLoggedIn]);
 
   // Load saved jobs from database
   const loadSavedJobs = async () => {
@@ -208,14 +220,14 @@ export default function UploadPage() {
     setIsUpdating(false);
 
     // Save to database if logged in
-    if (session) {
+    if (isLoggedIn) {
       await saveCvProfile();
     }
   };
 
   // Save CV profile to database
   const saveCvProfile = async () => {
-    if (!session || !result) return;
+    if (!isLoggedIn || !result) return;
 
     try {
       const response = await fetch('/api/cv/save-profile', {
@@ -394,7 +406,7 @@ export default function UploadPage() {
   // Toggle job saved state (with auth check)
   const toggleJobSaved = async (jobId: number) => {
     // Check if user is logged in
-    const isLoggedIn = sessionStatus === 'authenticated';
+    const userLoggedIn = isLoggedIn === true;
     
     if (!isLoggedIn) {
       // Show message and redirect to login
@@ -504,7 +516,7 @@ export default function UploadPage() {
       setStatus('Upload successful!');
 
       // Auto-save to database if logged in
-      if (session && data.cvProfile) {
+      if (isLoggedIn && data.cvProfile) {
         await saveCvProfile();
       }
     } catch (err) {
@@ -525,7 +537,7 @@ export default function UploadPage() {
             CV Matcher
           </div>
           <div className="flex items-center gap-4">
-            {session && (
+            {isLoggedIn && (
               <a
                 href="/dashboard"
                 className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
@@ -882,7 +894,7 @@ export default function UploadPage() {
         {result && (
           <div className="mt-12 space-y-8">
             {/* Logged-in user banner */}
-            {session && profileSaved && (
+            {isLoggedIn && profileSaved && (
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200 p-6">
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0">
@@ -912,7 +924,7 @@ export default function UploadPage() {
             )}
 
             {/* Not logged in banner */}
-            {!session && (
+            {!isLoggedIn && (
               <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-6">
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0">
