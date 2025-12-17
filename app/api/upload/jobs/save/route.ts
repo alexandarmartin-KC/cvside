@@ -4,14 +4,6 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    // Check if database is configured
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({ 
-        error: 'Database not configured',
-        details: 'DATABASE_URL environment variable is not set on Vercel'
-      }, { status: 503 });
-    }
-
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

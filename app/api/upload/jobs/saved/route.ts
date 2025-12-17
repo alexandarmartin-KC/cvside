@@ -4,11 +4,6 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
-    // Check if database is configured
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({ savedJobIds: [] });
-    }
-
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ savedJobIds: [] });
