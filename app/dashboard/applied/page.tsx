@@ -13,7 +13,24 @@ export default async function AppliedJobsPage() {
   const isTestUser = userId.startsWith('test-');
 
   // Try to load applied jobs even for test users if database is configured
-  let appliedJobs;
+  let appliedJobs: Awaited<ReturnType<typeof prisma.appliedJob.findMany<{
+    where: { userId: string };
+    include: {
+      job: {
+        select: {
+          id: true;
+          title: true;
+          company: true;
+          location: true;
+          remote: true;
+          description: true;
+          skills: true;
+          sourceUrl: true;
+        };
+      };
+    };
+    orderBy: { updatedAt: 'desc' };
+  }>>> = [];
   try {
     appliedJobs = await prisma.appliedJob.findMany({
       where: { userId },

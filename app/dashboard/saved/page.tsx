@@ -9,7 +9,20 @@ export default async function SavedJobsPage() {
   const isTestUser = userId.startsWith('test-');
 
   // Try to load saved jobs even for test users if database is configured
-  let savedJobs;
+  let savedJobs: Awaited<ReturnType<typeof prisma.savedJob.findMany<{
+    where: { userId: string };
+    include: {
+      job: {
+        include: {
+          jobMatches: {
+            where: { userId: string };
+            take: 1;
+          };
+        };
+      };
+    };
+    orderBy: { createdAt: 'desc' };
+  }>>> = [];
   try {
     savedJobs = await prisma.savedJob.findMany({
       where: { userId },
