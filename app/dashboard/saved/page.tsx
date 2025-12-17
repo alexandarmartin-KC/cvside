@@ -8,8 +8,32 @@ export default async function SavedJobsPage() {
   const userId = session.user.id;
   const isTestUser = userId.startsWith('test-');
 
-  // For test users, show empty state
-  if (isTestUser) {
+  // Try to load saved jobs even for test users if database is configured
+  let savedJobs;
+  try {
+    savedJobs = await prisma.savedJob.findMany({
+      where: { userId },
+      include: {
+        job: {
+          include: {
+            jobMatches: {
+              where: { userId },
+              take: 1,
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching saved jobs:', error);
+    savedJobs = [];
+  }
+
+  // For test users with no saved jobs, show empty state
+  if (isTestUser && savedJobs.length === 0) {
     return (
       <div className="space-y-6">
         <h1 className="text-3xl font-bold text-gray-900">Saved Jobs</h1>
@@ -18,13 +42,11 @@ export default async function SavedJobsPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
           </svg>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No saved jobs yet</h3>
-          <p className="text-gray-600">Saved jobs will appear here</p>
+          <p className="text-gray-600">Save jobs from the upload page to see them here</p>
         </div>
       </div>
     );
   }
-
-  const savedJobs = await prisma.savedJob.findMany({
     where: { userId },
     include: {
       job: {

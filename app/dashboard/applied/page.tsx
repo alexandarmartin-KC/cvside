@@ -12,8 +12,36 @@ export default async function AppliedJobsPage() {
   const userId = session.user.id;
   const isTestUser = userId.startsWith('test-');
 
-  // For test users, show empty state
-  if (isTestUser) {
+  // Try to load applied jobs even for test users if database is configured
+  let appliedJobs;
+  try {
+    appliedJobs = await prisma.appliedJob.findMany({
+      where: { userId },
+      include: {
+        job: {
+          select: {
+            id: true,
+            title: true,
+            company: true,
+            location: true,
+            remote: true,
+            description: true,
+            skills: true,
+            sourceUrl: true,
+          },
+        },
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching applied jobs:', error);
+    appliedJobs = [];
+  }
+
+  // For test users with no applied jobs, show empty state
+  if (isTestUser && appliedJobs.length === 0) {
     return (
       <div className="space-y-6">
         <h1 className="text-3xl font-bold text-gray-900">Applied Jobs</h1>
@@ -27,8 +55,6 @@ export default async function AppliedJobsPage() {
       </div>
     );
   }
-
-  const appliedJobs = await prisma.appliedJob.findMany({
     where: { userId },
     include: {
       job: {
