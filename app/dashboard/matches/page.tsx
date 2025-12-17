@@ -16,13 +16,39 @@ export default async function MatchesPage({
   searchParams: Promise<SearchParams>;
 }) {
   const session = await auth();
-  const userId = session!.user.id;
+  if (!session?.user) {
+    return <div>Not authenticated</div>;
+  }
+  
+  const userId = session.user.id;
+  const isTestUser = userId.startsWith('test-');
 
   const params = await searchParams;
   const location = params.location || '';
   const remoteOnly = params.remote === 'true';
   const minScore = parseInt(params.minScore || '0');
   const sortBy = params.sort || 'score'; // 'score' or 'newest'
+
+  // For test users, show empty state
+  if (isTestUser) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Job Matches</h1>
+            <p className="text-gray-600 mt-1">Upload your CV to get personalized job matches</p>
+          </div>
+        </div>
+        <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
+          <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No matches yet</h3>
+          <p className="text-gray-600 mb-6">Upload your CV to get personalized job matches</p>
+        </div>
+      </div>
+    );
+  }
 
   // Build where clause
   const whereClause: any = {
