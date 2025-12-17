@@ -6,12 +6,17 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getSessionUser();
     
+    console.log('Save profile - User:', user ? user.id : 'Not logged in');
+    
     // If not logged in, just return success without saving
     if (!user) {
+      console.log('Save profile - User not logged in, skipping save');
       return NextResponse.json({ success: true, saved: false });
     }
 
     const body = await req.json();
+    console.log('Save profile - Body received:', Object.keys(body));
+    
     const { 
       name, 
       title, 
@@ -25,14 +30,17 @@ export async function POST(req: NextRequest) {
 
     // Validate input
     if (!Array.isArray(skills) || !Array.isArray(locations)) {
+      console.log('Save profile - Invalid data types');
       return NextResponse.json(
         { error: 'Skills and locations must be arrays' },
         { status: 400 }
       );
     }
 
+    console.log('Save profile - Upserting for user:', user.id);
+
     // Upsert CV profile with all extracted data
-    await prisma.cvProfile.upsert({
+    const result = await prisma.cvProfile.upsert({
       where: { userId: user.id },
       create: {
         userId: user.id,
@@ -60,6 +68,8 @@ export async function POST(req: NextRequest) {
         updatedAt: new Date(),
       },
     });
+
+    console.log('Save profile - Successfully saved CV profile:', result.id);
 
     return NextResponse.json({ success: true, saved: true });
   } catch (error) {
