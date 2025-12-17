@@ -16,29 +16,36 @@ export default function ProfilePage() {
         const pendingData = localStorage.getItem('pendingCvData');
         
         if (pendingData) {
-          const parsed = JSON.parse(pendingData);
-          console.log('Found pending CV data in localStorage, saving...');
-          setPendingSave(true);
-          
-          // Save it to the database
-          const response = await fetch('/api/cv/save-profile', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: parsed.cvProfile.name,
-              title: parsed.cvProfile.title,
-              seniority: parsed.cvProfile.seniority_level,
-              summary: parsed.cvProfile.summary,
-              skills: parsed.cvProfile.core_skills,
-              locations: parsed.cvProfile.locations,
-              preferredLocation: parsed.cvProfile.locations[0] || '',
-              cvFileName: parsed.fileName || 'CV.pdf',
-            }),
-          });
-          
-          if (response.ok) {
-            console.log('Pending CV saved successfully');
-            localStorage.removeItem('pendingCvData');
+          try {
+            const parsed = JSON.parse(pendingData);
+            console.log('Found pending CV data in localStorage, saving...');
+            setPendingSave(true);
+            
+            // Save it to the database
+            const response = await fetch('/api/cv/save-profile', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: parsed.cvProfile.name,
+                title: parsed.cvProfile.title,
+                seniority: parsed.cvProfile.seniority_level,
+                summary: parsed.cvProfile.summary,
+                skills: parsed.cvProfile.core_skills,
+                locations: parsed.cvProfile.locations,
+                preferredLocation: parsed.cvProfile.locations[0] || '',
+                cvFileName: parsed.fileName || 'CV.pdf',
+              }),
+            });
+            
+            if (response.ok) {
+              console.log('Pending CV saved successfully');
+              localStorage.removeItem('pendingCvData');
+            } else {
+              console.error('Failed to save pending CV:', await response.text());
+            }
+          } catch (saveError) {
+            console.error('Error saving pending CV:', saveError);
+          } finally {
             setPendingSave(false);
           }
         }
@@ -47,7 +54,10 @@ export default function ProfilePage() {
         const profileResponse = await fetch('/api/dashboard/me/profile');
         if (profileResponse.ok) {
           const data = await profileResponse.json();
+          console.log('Profile loaded:', data.profile);
           setCvProfile(data.profile);
+        } else {
+          console.error('Failed to fetch profile:', await profileResponse.text());
         }
       } catch (error) {
         console.error('Failed to load profile:', error);
