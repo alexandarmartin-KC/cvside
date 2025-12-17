@@ -19,22 +19,6 @@ export default async function DashboardLayout({
   // Require authentication
   const user = await requireUser();
 
-  // Check if user has a CV profile
-  let cvProfile = null;
-  try {
-    cvProfile = await prisma.cvProfile.findUnique({
-      where: { userId: user.id },
-      select: { id: true },
-    });
-  } catch (error) {
-    console.error('Error checking CV profile:', error);
-  }
-
-  // If no CV profile, redirect to upload
-  if (!cvProfile) {
-    redirect('/upload');
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Bar */}
