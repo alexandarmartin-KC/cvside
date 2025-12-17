@@ -1,103 +1,17 @@
 import { requireUser } from '@/lib/auth-session';
-import { prisma } from '@/lib/prisma';
-import Link from 'next/link';
-import { ProfileForm } from './profile-form';
 
 export default async function DashboardPage() {
   const user = await requireUser();
-  const userId = user.id;
 
-  // Fetch CV profile
-  let cvProfile = null;
-  try {
-    cvProfile = await prisma.cvProfile.findUnique({
-      where: { userId },
-      select: {
-        id: true,
-        name: true,
-        title: true,
-        cvFileName: true,
-        cvUploadedAt: true,
-      }
-    });
-  } catch (dbError) {
-    console.error('Error fetching CV profile:', dbError);
-    throw dbError;
-  }
-
-  // If no CV profile exists, show welcome message
-  if (!cvProfile) {
-    return (
-      <div className="max-w-3xl mx-auto">
-        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to CV Matcher!</h1>
-          <p className="text-gray-600 mb-6">
-            To get started, upload your CV and we'll analyze it to find matching job opportunities for you.
-          </p>
-          <Link
-            href="/upload"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-            Upload Your CV
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  // Fetch job counts
-  let matchCount = 0;
-  let savedCount = 0;
-  let appliedCount = 0;
-
-  try {
-    [matchCount, savedCount, appliedCount] = await Promise.all([
-      prisma.jobMatch.count({ where: { userId } }),
-      prisma.savedJob.count({ where: { userId } }),
-      prisma.appliedJob.count({ where: { userId } }),
-    ]);
-  } catch (dbError) {
-    console.error('Error fetching job counts:', dbError);
-    matchCount = 0;
-    savedCount = 0;
-    appliedCount = 0;
-  }
-
-  const formatDate = (date: Date | null) => {
-    if (!date) return 'Unknown';
-    return new Intl.DateTimeFormat('en-US', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    }).format(new Date(date));
-  };
-
-  // DASHBOARD CONTENT - CV profile exists
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h1 className="text-2xl font-bold text-gray-900">Your base profile</h1>
-        <p className="text-gray-700 mt-1">
-          Created from your uploaded CV and used for job matching.
-        </p>
+    <div className="max-w-5xl mx-auto">
+      <div className="bg-white rounded-lg border border-gray-200 p-8">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Dashboard</h1>
+        <p className="text-gray-600">Welcome, {user.email}</p>
       </div>
-
-      {/* Base CV Card */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Base CV</h2>
-        
-        <div className="bg-gray-50 rounded-lg p-4 mb-4">
-          <div className="flex items-start gap-3">
-            <svg className="w-10 h-10 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    </div>
+  );
+}
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <div className="flex-1">
