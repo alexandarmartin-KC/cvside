@@ -226,30 +226,36 @@ export default function UploadPage() {
   };
 
   // Save CV profile to database
-  const saveCvProfile = async () => {
-    if (!isLoggedIn || !result) return;
+  const saveCvProfile = async (cvData?: typeof result) => {
+    const dataToSave = cvData || result;
+    if (!isLoggedIn || !dataToSave) return;
 
     try {
+      console.log('Saving CV profile...');
       const response = await fetch('/api/cv/save-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: result.cvProfile.name,
-          title: result.cvProfile.title,
-          seniority: result.cvProfile.seniority_level,
-          summary: result.cvProfile.summary,
-          skills: manualSkills,
-          locations: manualLocations,
-          preferredLocation,
+          name: dataToSave.cvProfile.name,
+          title: dataToSave.cvProfile.title,
+          seniority: dataToSave.cvProfile.seniority_level,
+          summary: dataToSave.cvProfile.summary,
+          skills: cvData ? dataToSave.cvProfile.core_skills : manualSkills,
+          locations: cvData ? dataToSave.cvProfile.locations : manualLocations,
+          preferredLocation: cvData ? (dataToSave.cvProfile.locations[0] || '') : preferredLocation,
           cvFileName: file?.name || 'CV.pdf',
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
+        console.log('CV profile save response:', data);
         if (data.saved) {
           setProfileSaved(true);
+          console.log('CV profile saved successfully');
         }
+      } else {
+        console.error('Failed to save CV profile - response not ok');
       }
     } catch (error) {
       console.error('Failed to save CV profile:', error);
@@ -515,9 +521,12 @@ export default function UploadPage() {
       setResult(data);
       setStatus('Upload successful!');
 
-      // Auto-save to database if logged in
+      // Auto-save to database if logged in - pass data directly
       if (isLoggedIn && data.cvProfile) {
-        await saveCvProfile();
+        console.log('User logged in, saving CV profile...');
+        await saveCvProfile(data);
+      } else {
+        console.log('Not saving CV profile - logged in:', isLoggedIn);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
