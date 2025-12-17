@@ -19,6 +19,13 @@ export default async function DashboardPage() {
     try {
       cvProfile = await prisma.cvProfile.findUnique({
         where: { userId },
+        select: {
+          id: true,
+          name: true,
+          title: true,
+          cvFileName: true,
+          cvUploadedAt: true,
+        }
       });
     } catch (dbError) {
       if (isTestUser) {

@@ -13,6 +13,14 @@ export async function GET() {
     
     const profile = await prisma.cvProfile.findUnique({
       where: { userId },
+      select: {
+        name: true,
+        title: true,
+        cvFileName: true,
+        cvUploadedAt: true,
+        createdAt: true,
+        updatedAt: true,
+      }
     });
 
     const matchCount = await prisma.jobMatch.count({ where: { userId } });
@@ -22,13 +30,7 @@ export async function GET() {
     return NextResponse.json({
       userId,
       hasProfile: !!profile,
-      profile: profile ? {
-        name: profile.name,
-        title: profile.title,
-        cvFileName: profile.cvFileName,
-        cvUploadedAt: profile.cvUploadedAt,
-        workPreference: profile.workPreference,
-      } : null,
+      profile,
       counts: {
         matches: matchCount,
         saved: savedCount,

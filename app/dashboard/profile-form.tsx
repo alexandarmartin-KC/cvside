@@ -8,12 +8,12 @@ type CvProfile = {
   id: string;
   name: string | null;
   title: string | null;
-  summary: string | null;
-  workPreference: string | null;
+  summary?: string | null;
+  workPreference?: string | null;
   cvFileName: string | null;
   cvUploadedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 };
 
 export function ProfileForm({ profile }: { profile: CvProfile }) {
