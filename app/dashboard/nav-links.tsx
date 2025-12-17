@@ -17,23 +17,24 @@ export function NavLink({
   const pathname = usePathname();
   const isActive = pathname === href;
 
-  // Determine the className based on state
-  let className = 'flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group ';
+  // Build stable className without transitions on structural changes
+  const baseClasses = 'flex items-center gap-3 px-4 py-2.5 rounded-lg group';
   
+  let stateClasses = '';
   if (primary && isActive) {
-    className += 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md';
+    stateClasses = 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md';
   } else if (primary) {
-    className += 'bg-blue-50 text-blue-700 hover:bg-blue-100 border-2 border-blue-200';
+    stateClasses = 'bg-blue-50 text-blue-700 hover:bg-blue-100';
   } else if (isActive) {
-    className += 'bg-blue-50 text-blue-700';
+    stateClasses = 'bg-blue-50 text-blue-700';
   } else {
-    className += 'text-gray-700 hover:bg-gray-100 hover:text-gray-900';
+    stateClasses = 'text-gray-700 hover:bg-gray-100 hover:text-gray-900';
   }
 
   return (
-    <Link href={href} className={className}>
+    <Link href={href} className={`${baseClasses} ${stateClasses}`}>
       <NavIcon icon={icon} />
-      <span className={`font-medium text-sm ${primary ? 'font-semibold' : ''}`}>{children}</span>
+      <span className={`text-sm ${primary ? 'font-semibold' : 'font-medium'}`}>{children}</span>
     </Link>
   );
 }
