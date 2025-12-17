@@ -82,10 +82,47 @@ export default function UploadPage() {
         const nowLoggedIn = response.ok;
         setIsLoggedIn(nowLoggedIn);
         
-        // If user just logged in and has CV data, save it automatically
-        if (!wasLoggedIn && nowLoggedIn && result && !profileSaved) {
-          console.log('User just logged in with existing CV data - auto-saving profile');
-          await saveCvProfile(result);
+        // If user just logged in, check for pending CV data in localStorage
+        if (!wasLoggedIn && nowLoggedIn) {
+          console.log('User just logged in - checking for pending CV data');
+          const pendingData = localStorage.getItem('pendingCvData');
+          
+          if (pendingData) {
+            try {
+              const parsed = JSON.parse(pendingData);
+              console.log('Found pending CV data, saving to profile...');
+              
+              // Save the pending CV data
+              const saveResponse = await fetch('/api/cv/save-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  name: parsed.cvProfile.name,
+                  title: parsed.cvProfile.title,
+                  seniority: parsed.cvProfile.seniority_level,
+                  summary: parsed.cvProfile.summary,
+                  skills: parsed.cvProfile.core_skills,
+                  locations: parsed.cvProfile.locations,
+                  preferredLocation: parsed.cvProfile.locations[0] || '',
+                  cvFileName: parsed.fileName || 'CV.pdf',
+                }),
+              });
+              
+              if (saveResponse.ok) {
+                console.log('Pending CV profile saved successfully');
+                localStorage.removeItem('pendingCvData');
+                setProfileSaved(true);
+              }
+            } catch (error) {
+              console.error('Failed to save pending CV data:', error);
+            }
+          }
+          
+          // Also check if there's current result data
+          if (result && !profileSaved) {
+            console.log('User just logged in with existing CV data - auto-saving profile');
+            await saveCvProfile(result);
+          }
         }
       } catch {
         setIsLoggedIn(false);
@@ -533,12 +570,23 @@ export default function UploadPage() {
       setResult(data);
       setStatus('Upload successful!');
 
+      // Store CV data in localStorage for persistence across navigation
+      if (data.cvProfile) {
+        localStorage.setItem('pendingCvData', JSON.stringify({
+          cvProfile: data.cvProfile,
+          fileName: file.name,
+          timestamp: Date.now()
+        }));
+      }
+
       // Auto-save to database if logged in - pass data directly
       if (isLoggedIn && data.cvProfile) {
         console.log('User logged in, saving CV profile...');
         await saveCvProfile(data);
+        // Clear localStorage after successful save
+        localStorage.removeItem('pendingCvData');
       } else {
-        console.log('Not saving CV profile - logged in:', isLoggedIn);
+        console.log('Not saving CV profile yet - user not logged in');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
