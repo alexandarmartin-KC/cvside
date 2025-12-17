@@ -1362,6 +1362,31 @@ export default function UploadPage() {
                               </div>
                             </div>
                           </div>
+
+                          {/* CTA for non-logged in users */}
+                          {!isLoggedIn && (
+                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-4">
+                              <div className="flex items-start gap-3">
+                                <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <div className="flex-1">
+                                  <p className="text-sm text-gray-800 mb-2">
+                                    <strong>Create a profile</strong> to save jobs, track applications, and get the full benefits of your job dashboard
+                                  </p>
+                                  <a
+                                    href="/signup"
+                                    className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                                  >
+                                    Sign up now
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                    </svg>
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
 
