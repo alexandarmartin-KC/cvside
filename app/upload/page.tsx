@@ -36,6 +36,8 @@ export default function UploadPage() {
       skills: string[];
       description: string;
     }>;
+    cvDataUrl?: string;
+    fileName?: string;
   } | null>(null);
 
   // Draft state (user is editing)
