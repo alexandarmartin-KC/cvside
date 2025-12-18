@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 export function SaveJobButton({ jobId, userId, isSaved = false }: { jobId: string; userId: string; isSaved?: boolean }) {
   const [loading, setLoading] = useState(false);
   const [optimisticSaved, setOptimisticSaved] = useState(isSaved);
+  const [actionType, setActionType] = useState<'saving' | 'unsaving' | null>(null);
   const router = useRouter();
 
   // Update optimistic state when prop changes
@@ -14,13 +15,17 @@ export function SaveJobButton({ jobId, userId, isSaved = false }: { jobId: strin
   });
 
   async function handleToggle() {
+    // Store what action we're performing before changing state
+    const wasSaved = optimisticSaved;
+    setActionType(wasSaved ? 'unsaving' : 'saving');
+    
     // Optimistically update UI immediately
     const newSavedState = !optimisticSaved;
     setOptimisticSaved(newSavedState);
     setLoading(true);
 
     try {
-      const endpoint = optimisticSaved ? '/api/dashboard/jobs/unsave' : '/api/dashboard/jobs/save';
+      const endpoint = wasSaved ? '/api/dashboard/jobs/unsave' : '/api/dashboard/jobs/save';
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -41,8 +46,16 @@ export function SaveJobButton({ jobId, userId, isSaved = false }: { jobId: strin
       console.error('Error toggling save:', error);
     } finally {
       setLoading(false);
+      setActionType(null);
     }
   }
+
+  const getButtonText = () => {
+    if (loading && actionType) {
+      return actionType === 'saving' ? 'Saving...' : 'Unsaving...';
+    }
+    return optimisticSaved ? 'Click to unsave' : 'Save';
+  };
 
   return (
     <button
@@ -54,7 +67,7 @@ export function SaveJobButton({ jobId, userId, isSaved = false }: { jobId: strin
           : 'bg-blue-600 text-white hover:bg-blue-700'
       }`}
     >
-      {loading ? (optimisticSaved ? 'Unsaving...' : 'Saving...') : (optimisticSaved ? 'Click to unsave' : 'Save')}
+      {getButtonText()}
     </button>
   );
 }
