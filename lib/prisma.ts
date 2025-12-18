@@ -7,7 +7,13 @@ const globalForPrisma = globalThis as unknown as {
 // Only create Prisma client if DATABASE_URL is set
 const prisma = globalForPrisma.prisma ?? (
   process.env.DATABASE_URL 
-    ? new PrismaClient()
+    ? new PrismaClient({
+        datasources: {
+          db: {
+            url: process.env.DATABASE_URL + '&pgbouncer=true&statement_cache_size=0'
+          }
+        }
+      })
     : new PrismaClient({
         datasources: {
           db: {
