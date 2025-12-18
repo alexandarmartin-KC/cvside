@@ -49,36 +49,48 @@ export async function createSession(userId: string) {
     sameSite: 'lax',
     path: '/',
     maxAge: 60 * 60 * 24 * 7, // 7 days
+    priority: 'high',
   });
 
+  console.log('Session created for user:', userId);
   return token;
 }
 
 // Get the current session user from cookie
 export async function getSessionUser() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value;
-
-  if (!token) {
-    return null;
-  }
-
   try {
-    const { payload } = await jwtVerify<SessionPayload>(token, getSecretKey());
-    
-    // Verify user still exists
-    const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        image: true,
-        createdAt: true,
-      },
-    });
+    const cookieStore = await cookies();
+    const token = cookieStore.get(COOKIE_NAME)?.value;
 
-    return user;
+    if (!token) {
+      console.log('No session token found in cookies');
+      return null;
+    }
+
+    try {
+      const { payload } = await jwtVerify<SessionPayload>(token, getSecretKey());
+      
+      // Verify user still exists
+      const user = await prisma.user.findUnique({
+        where: { id: payload.userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          image: true,
+          createdAt: true,
+        },
+      });
+
+      if (!user) {
+        console.log('User not found for session:', payload.userId);
+      }
+
+      return user;
+    } catch (jwtError) {
+      console.error('JWT verification failed:', jwtError);
+      return null;
+    }
   } catch (error) {
     console.error('Session verification failed:', error);
     return null;
