@@ -64,20 +64,28 @@ export function MoveToAppliedButton({
 
   async function handleUnmarkApplied() {
     setLoading(true);
+    console.log('Unmarking job:', jobId);
     try {
       const res = await fetch('/api/dashboard/jobs/unapply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobId }),
       });
+      
+      const data = await res.json();
+      console.log('Unapply response:', res.status, data);
+      
       if (res.ok) {
+        console.log('Reloading page...');
         window.location.reload();
       } else {
-        console.error('Failed to unmark job:', await res.text());
+        console.error('Failed to unmark job:', data);
+        alert('Failed to unmark job: ' + (data.error || 'Unknown error'));
         setLoading(false);
       }
     } catch (error) {
       console.error('Error unmarking job:', error);
+      alert('Error unmarking job. Please try again.');
       setLoading(false);
     }
   }

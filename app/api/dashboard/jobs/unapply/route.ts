@@ -10,19 +10,23 @@ export async function POST(req: NextRequest) {
     }
 
     const { jobId } = await req.json();
+    console.log('Unapply request - userId:', session.user.id, 'jobId:', jobId);
+    
     if (!jobId) {
       return NextResponse.json({ error: 'Job ID required' }, { status: 400 });
     }
 
     // Delete the AppliedJob record
-    await prisma.appliedJob.deleteMany({
+    const deleted = await prisma.appliedJob.deleteMany({
       where: {
         userId: session.user.id,
         jobId: jobId,
       },
     });
 
-    return NextResponse.json({ success: true });
+    console.log('Deleted applied job records:', deleted.count);
+
+    return NextResponse.json({ success: true, deleted: deleted.count });
   } catch (error) {
     console.error('Error unmarking job as applied:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
