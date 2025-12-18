@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -24,6 +24,9 @@ export function ProfileForm({ profile }: { profile: CvProfile }) {
   const [workPreference, setWorkPreference] = useState(profile.workPreference || 'ANY');
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   async function handleSave() {
@@ -59,6 +62,79 @@ export function ProfileForm({ profile }: { profile: CvProfile }) {
       month: 'long',
       year: 'numeric'
     }).format(new Date(date));
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      setUploadError('Please select a PDF file');
+      return;
+    }
+
+    setUploading(true);
+    setUploadError('');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      // Parse the CV
+      const parseResponse = await fetch('/api/cv/parse', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!parseResponse.ok) {
+        const errorData = await parseResponse.json();
+        throw new Error(errorData.error || 'Upload failed');
+      }
+
+      const parseData = await parseResponse.json();
+
+      // Save the CV profile
+      const saveResponse = await fetch('/api/cv/save-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: parseData.cvProfile.name,
+          title: parseData.cvProfile.title,
+          seniority: parseData.cvProfile.seniority_level,
+          summary: parseData.cvProfile.summary,
+          skills: parseData.cvProfile.core_skills,
+          locations: parseData.cvProfile.locations,
+          preferredLocation: parseData.cvProfile.locations[0] || '',
+          workPreference: workPreference || 'ANY',
+          cvFileName: file.name,
+          cvUrl: parseData.cvDataUrl || null,
+        }),
+      });
+
+      if (saveResponse.ok) {
+        // Update local state with new values
+        setName(parseData.cvProfile.name);
+        setTitle(parseData.cvProfile.title);
+        setSummary(parseData.cvProfile.summary);
+        
+        // Refresh the page to get updated profile data
+        router.refresh();
+      } else {
+        throw new Error('Failed to save CV profile');
+      }
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleReplaceClick = () => {
+    fileInputRef.current?.click();
   };
 
   return (
@@ -192,29 +268,51 @@ export function ProfileForm({ profile }: { profile: CvProfile }) {
                   Open CV (PDF)
                 </button>
               )}
-              <Link
-                href="/upload"
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <button
+                onClick={handleReplaceClick}
+                disabled={uploading}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>
-                Replace CV
-              </Link>
+                {uploading ? 'Uploading...' : 'Replace CV'}
+              </button>
             </div>
+            {uploadError && (
+              <p className="mt-3 text-sm text-red-600">{uploadError}</p>
+            )}
           </>
         ) : (
           <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mb-6">
             <p className="text-gray-600 mb-4">No CV available. Upload one to get started with job matching.</p>
-            <Link
-              href="/upload"
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <button
+              onClick={handleReplaceClick}
+              disabled={uploading}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
-              Upload CV
-            </Link>
+              {uploading ? 'Uploading...' : 'Upload CV'}
+            </button>
+            {uploadError && (
+              <p className="mt-3 text-sm text-red-600">{uploadError}</p>
+            )}
           </div>
         )}
       </div>
