@@ -55,6 +55,7 @@ export default function SignupPage() {
               locations: parsed.cvProfile.locations,
               preferredLocation: parsed.cvProfile.locations[0] || '',
               cvFileName: parsed.fileName || 'CV.pdf',
+              cvUrl: parsed.cvDataUrl || null,
             }),
           });
           

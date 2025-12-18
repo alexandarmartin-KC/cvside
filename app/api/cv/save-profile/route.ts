@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
       locations, 
       preferredLocation,
       cvFileName,
+      cvUrl,
       workPreference
     } = body;
 
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest) {
         locations,
         preferredLocation: preferredLocation || (locations.length > 0 ? locations[0] : null),
         cvFileName: cvFileName || null,
+        cvUrl: cvUrl || null,
         cvUploadedAt: cvFileName ? new Date() : null,
         workPreference: workPreference || 'ANY',
       },
@@ -66,6 +68,7 @@ export async function POST(req: NextRequest) {
         preferredLocation: preferredLocation || (locations.length > 0 ? locations[0] : null),
         ...(cvFileName && {
           cvFileName,
+          cvUrl: cvUrl || null,
           cvUploadedAt: new Date(),
         }),
         updatedAt: new Date(),

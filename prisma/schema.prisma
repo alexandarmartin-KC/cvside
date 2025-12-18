@@ -96,6 +96,7 @@ model CvProfile {
   workPreference    String?  @default("ANY")
   cvFileName        String?
   cvUploadedAt      DateTime?
+  cvUrl             String?  @db.Text
   
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

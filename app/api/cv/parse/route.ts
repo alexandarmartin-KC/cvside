@@ -183,6 +183,10 @@ export async function POST(request: NextRequest) {
     // Convert file to Buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+    
+    // Convert to base64 data URL for storage
+    const base64 = buffer.toString('base64');
+    const cvDataUrl = `data:application/pdf;base64,${base64}`;
 
     // Extract text from PDF using pdf-parse
     const pdfData = await pdf(buffer);
@@ -291,7 +295,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       cvProfile,
       matches,
-      jobs: SAMPLE_JOBS
+      jobs: SAMPLE_JOBS,
+      cvDataUrl,  // Include the base64 PDF data URL
+      fileName: file.name
     });
 
   } catch (error) {

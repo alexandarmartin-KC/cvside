@@ -292,7 +292,8 @@ export default function UploadPage() {
           skills: cvData ? dataToSave.cvProfile.core_skills : manualSkills,
           locations: cvData ? dataToSave.cvProfile.locations : manualLocations,
           preferredLocation: cvData ? (dataToSave.cvProfile.locations[0] || '') : preferredLocation,
-          cvFileName: file?.name || 'CV.pdf',
+          cvFileName: dataToSave.fileName || file?.name || 'CV.pdf',
+          cvUrl: dataToSave.cvDataUrl || null,
         }),
       });
 
@@ -575,6 +576,7 @@ export default function UploadPage() {
         localStorage.setItem('pendingCvData', JSON.stringify({
           cvProfile: data.cvProfile,
           fileName: file.name,
+          cvDataUrl: data.cvDataUrl,
           timestamp: Date.now()
         }));
       }
