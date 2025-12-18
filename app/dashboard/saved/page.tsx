@@ -45,8 +45,16 @@ export default async function SavedJobsPage() {
         createdAt: 'desc',
       },
     });
-    console.log('Saved Jobs Page - Saved jobs count:', savedJobs.length);
-    console.log('Saved Jobs Page - Saved job IDs:', savedJobs.map(sj => ({ savedId: sj.id, jobId: sj.jobId, createdAt: sj.createdAt })));
+    console.log('=== SAVED JOBS DEBUG ===');
+    console.log('User ID:', userId);
+    console.log('Saved Jobs Count:', savedJobs.length);
+    console.log('Saved Job Details:', JSON.stringify(savedJobs.map(sj => ({ 
+      savedId: sj.id, 
+      jobId: sj.jobId, 
+      userId: sj.userId,
+      createdAt: sj.createdAt 
+    }))));
+    console.log('========================');
   } catch (error) {
     console.error('Error fetching saved jobs:', error);
     savedJobs = [];
