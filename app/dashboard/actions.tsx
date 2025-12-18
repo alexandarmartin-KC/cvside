@@ -5,69 +5,50 @@ import { useRouter } from 'next/navigation';
 
 export function SaveJobButton({ jobId, userId, isSaved = false }: { jobId: string; userId: string; isSaved?: boolean }) {
   const [loading, setLoading] = useState(false);
-  const [optimisticSaved, setOptimisticSaved] = useState(isSaved);
-  const [actionType, setActionType] = useState<'saving' | 'unsaving' | null>(null);
   const router = useRouter();
 
-  // Update optimistic state when prop changes
-  useState(() => {
-    setOptimisticSaved(isSaved);
-  });
-
   async function handleToggle() {
-    // Store what action we're performing before changing state
-    const wasSaved = optimisticSaved;
-    setActionType(wasSaved ? 'unsaving' : 'saving');
-    
-    // Optimistically update UI immediately
-    const newSavedState = !optimisticSaved;
-    setOptimisticSaved(newSavedState);
     setLoading(true);
-
     try {
-      const endpoint = wasSaved ? '/api/dashboard/jobs/unsave' : '/api/dashboard/jobs/save';
+      const endpoint = isSaved ? '/api/dashboard/jobs/unsave' : '/api/dashboard/jobs/save';
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobId }),
       });
       
-      if (!res.ok) {
-        // Revert on error
-        setOptimisticSaved(!newSavedState);
-        console.error('Failed to toggle save status');
-      } else {
-        // Background refresh without blocking UI
-        setTimeout(() => router.refresh(), 100);
+      if (res.ok) {
+        router.refresh();
       }
     } catch (error) {
-      // Revert on error
-      setOptimisticSaved(!newSavedState);
       console.error('Error toggling save:', error);
     } finally {
       setLoading(false);
-      setActionType(null);
     }
   }
 
-  const getButtonText = () => {
-    if (loading && actionType) {
-      return actionType === 'saving' ? 'Saving...' : 'Unsaving...';
-    }
-    return optimisticSaved ? 'Click to unsave' : 'Save';
-  };
+  if (isSaved) {
+    return (
+      <button
+        onClick={handleToggle}
+        disabled={loading}
+        className="px-4 py-2 text-sm bg-gray-100 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 flex items-center gap-2"
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+        </svg>
+        {loading ? 'Removing...' : 'Saved'}
+      </button>
+    );
+  }
 
   return (
     <button
       onClick={handleToggle}
       disabled={loading}
-      className={`px-4 py-2 text-sm rounded-lg transition-all disabled:opacity-50 ${
-        optimisticSaved 
-          ? 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200' 
-          : 'bg-blue-600 text-white hover:bg-blue-700'
-      }`}
+      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
     >
-      {getButtonText()}
+      {loading ? 'Saving...' : 'Save'}
     </button>
   );
 }

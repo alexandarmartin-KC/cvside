@@ -135,15 +135,27 @@ export default async function ProfilePage({
         {matchesWithNewFlag.length > 0 ? (
           <div className="grid gap-6">
             {matchesWithNewFlag.map((match) => (
-              <JobCardWrapper
+              <JobCard
                 key={match.id}
                 job={match.job}
                 score={match.score}
                 reasons={match.reasons}
                 isNew={match.isNew}
-                initialIsSaved={match.job.savedJobs?.length > 0}
+                isSaved={match.job.savedJobs?.length > 0}
                 appliedAt={match.job.appliedJobs?.[0]?.appliedAt || null}
-                userId={userId}
+                actions={
+                  <>
+                    <SaveJobButton 
+                      jobId={match.job.id} 
+                      userId={userId} 
+                      isSaved={match.job.savedJobs?.length > 0}
+                    />
+                    <MarkAppliedButton jobId={match.job.id} userId={userId} />
+                    <button className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                      View Details
+                    </button>
+                  </>
+                }
               />
             ))}
           </div>
