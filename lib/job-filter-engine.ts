@@ -13,6 +13,7 @@ type Job = {
 
 type FilterInput = {
   location?: string | null;
+  radius_km?: number | null;
   minimum_score?: string | number | null;
   sort_by?: string | null;
 };
@@ -21,6 +22,7 @@ type FilterOutput = {
   filtered_jobs: Job[];
   applied_filters: {
     location: string | null;
+    radius_km: number | null;
     minimum_score: "Any" | 50 | 60 | 70 | 80;
     sort_by: "Best Match" | "Newest" | "Oldest" | "Company A–Z";
   };
@@ -34,6 +36,15 @@ function normalizeFilters(input: FilterInput) {
   let location: string | null = null;
   if (input.location && typeof input.location === 'string' && input.location.trim()) {
     location = input.location.trim();
+  }
+
+  // Normalize radius_km
+  let radius_km: number | null = null;
+  if (location && input.radius_km !== undefined && input.radius_km !== null) {
+    const radiusVal = typeof input.radius_km === 'number' ? input.radius_km : parseFloat(String(input.radius_km));
+    if (!isNaN(radiusVal) && radiusVal > 0) {
+      radius_km = radiusVal;
+    }
   }
 
   // Normalize minimum_score
@@ -68,7 +79,7 @@ function normalizeFilters(input: FilterInput) {
     }
   }
 
-  return { location, minimum_score, sort_by };
+  return { location, radius_km, minimum_score, sort_by };
 }
 
 /**
@@ -114,7 +125,7 @@ export function filterAndSortJobs(jobs: Job[], filters: FilterInput): FilterOutp
     // Helper: Get company name for sorting
     const getCompany = (job: Job) => (job.company || "").toLowerCase();
     
-    // Helper: Check location match for boost
+    // Helper: Check location match for proximity preference
     const locationMatchA = locationMatches(a.location, normalized.location);
     const locationMatchB = locationMatches(b.location, normalized.location);
     
@@ -123,50 +134,75 @@ export function filterAndSortJobs(jobs: Job[], filters: FilterInput): FilterOutp
     
     switch (normalized.sort_by) {
       case "Best Match":
-        primaryComparison = getScore(b) - getScore(a); // Descending
+        // Primary: score descending
+        primaryComparison = getScore(b) - getScore(a);
+        // Secondary: location match
+        if (primaryComparison === 0 && normalized.location) {
+          if (locationMatchA && !locationMatchB) return -1;
+          if (!locationMatchA && locationMatchB) return 1;
+        }
+        // Tertiary: posted_at descending
+        if (primaryComparison === 0) {
+          const dateA = getDate(a);
+          const dateB = getDate(b);
+          if (dateA !== null && dateB !== null) {
+            return dateB - dateA;
+          }
+        }
         break;
         
       case "Newest":
+        // Primary: posted_at descending
         const dateA = getDate(a);
         const dateB = getDate(b);
         if (dateA === null && dateB === null) primaryComparison = 0;
         else if (dateA === null) primaryComparison = 1; // Push nulls to end
         else if (dateB === null) primaryComparison = -1;
-        else primaryComparison = dateB - dateA; // Descending (newest first)
+        else primaryComparison = dateB - dateA;
+        // Secondary: location match
+        if (primaryComparison === 0 && normalized.location) {
+          if (locationMatchA && !locationMatchB) return -1;
+          if (!locationMatchA && locationMatchB) return 1;
+        }
+        // Tertiary: score descending
+        if (primaryComparison === 0) {
+          return getScore(b) - getScore(a);
+        }
         break;
         
       case "Oldest":
+        // Primary: posted_at ascending
         const dateAOld = getDate(a);
         const dateBOld = getDate(b);
         if (dateAOld === null && dateBOld === null) primaryComparison = 0;
         else if (dateAOld === null) primaryComparison = 1; // Push nulls to end
         else if (dateBOld === null) primaryComparison = -1;
-        else primaryComparison = dateAOld - dateBOld; // Ascending (oldest first)
+        else primaryComparison = dateAOld - dateBOld;
+        // Secondary: location match
+        if (primaryComparison === 0 && normalized.location) {
+          if (locationMatchA && !locationMatchB) return -1;
+          if (!locationMatchA && locationMatchB) return 1;
+        }
+        // Tertiary: score descending
+        if (primaryComparison === 0) {
+          return getScore(b) - getScore(a);
+        }
         break;
         
       case "Company A–Z":
+        // Primary: alphabetical by company
         const compA = getCompany(a);
         const compB = getCompany(b);
         if (!compA && !compB) primaryComparison = 0;
         else if (!compA) primaryComparison = 1; // Push empty to end
         else if (!compB) primaryComparison = -1;
         else primaryComparison = compA.localeCompare(compB);
+        // Secondary: location match
+        if (primaryComparison === 0 && normalized.location) {
+          if (locationMatchA && !locationMatchB) return -1;
+          if (!locationMatchA && locationMatchB) return 1;
+        }
         break;
-    }
-    
-    // If primary comparison is equal, apply location boost
-    if (primaryComparison === 0 && normalized.location) {
-      if (locationMatchA && !locationMatchB) return -1;
-      if (!locationMatchA && locationMatchB) return 1;
-    }
-    
-    // If still equal and sort is "Best Match", use posted_at as tiebreaker
-    if (primaryComparison === 0 && normalized.sort_by === "Best Match") {
-      const dateA = getDate(a);
-      const dateB = getDate(b);
-      if (dateA !== null && dateB !== null) {
-        return dateB - dateA; // Newer first
-      }
     }
     
     return primaryComparison;
