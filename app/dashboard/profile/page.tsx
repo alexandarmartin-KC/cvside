@@ -67,6 +67,12 @@ export default async function ProfilePage({
   console.log('User ID:', userId);
   console.log('Total matches found:', allMatches.length);
   console.log('CV Profile:', cvProfile.title, '-', cvProfile.seniority);
+  console.log('Sample match with saved status:', allMatches[0] ? {
+    jobId: allMatches[0].job.id,
+    jobTitle: allMatches[0].job.title,
+    savedJobs: allMatches[0].job.savedJobs,
+    isSaved: allMatches[0].job.savedJobs?.length > 0
+  } : 'No matches');
 
   // Transform to filtering engine format
   const jobs = allMatches.map(match => ({

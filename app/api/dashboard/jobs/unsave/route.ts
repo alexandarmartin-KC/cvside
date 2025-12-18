@@ -8,13 +8,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { savedJobId } = await req.json();
+  const { jobId } = await req.json();
 
   try {
     await prisma.savedJob.delete({
       where: {
-        id: savedJobId,
-        userId: session.user.id,
+        userId_jobId: {
+          userId: session.user.id,
+          jobId,
+        },
       },
     });
 
