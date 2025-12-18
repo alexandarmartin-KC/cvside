@@ -64,7 +64,7 @@ export default async function ProfilePage({
     company: match.job.company,
     location: match.job.location,
     score: match.score,
-    posted_at: match.job.postedAt?.toISOString() || null,
+    posted_at: match.job.createdAt?.toISOString() || null,
   }));
 
   // Apply deterministic filtering and sorting
