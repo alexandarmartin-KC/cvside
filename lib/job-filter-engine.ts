@@ -89,9 +89,10 @@ export function filterAndSortJobs(jobs: Job[], filters: FilterInput): FilterOutp
   // Step 1: Apply minimum_score filter
   let filtered = jobs;
   if (normalized.minimum_score !== "Any") {
+    const threshold = normalized.minimum_score as number;
     filtered = jobs.filter(job => {
       const score = job.score ?? 0;
-      return score >= normalized.minimum_score;
+      return score >= threshold;
     });
   }
 
