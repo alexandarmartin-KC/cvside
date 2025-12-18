@@ -23,11 +23,19 @@ export async function auth() {
 }
 
 export async function protectRoute() {
-  const session = await getServerSession();
-  if (!session) {
+  const user = await getSessionUser();
+  if (!user) {
     redirect('/login');
   }
-  return session;
+  // Return session-like object for compatibility
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      image: user.image,
+    },
+  };
 }
 
 // Re-export client-side functions
