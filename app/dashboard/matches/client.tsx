@@ -54,6 +54,56 @@ export function RefreshJobsButton({ userId, hasProfile }: { userId: string; hasP
   );
 }
 
+export function SeedMockDataButton() {
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  async function handleSeed() {
+    if (!confirm('This will create 8 mock jobs. Continue?')) return;
+    
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const response = await fetch('/api/admin/seed-mock-jobs', {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(data.error || 'Failed to create mock data');
+      } else {
+        setMessage(`✓ Created ${data.jobs} jobs with ${data.matches} matches`);
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      }
+    } catch (error) {
+      setMessage('Error creating mock data');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-3">
+      <button
+        onClick={handleSeed}
+        disabled={loading}
+        className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        {loading ? 'Creating...' : '🎲 Seed Mock Data'}
+      </button>
+      {message && (
+        <span className={`text-sm ${message.includes('✓') ? 'text-green-600' : 'text-red-600'}`}>
+          {message}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function FilterForm({
   initialLocation,
   initialRadius,
