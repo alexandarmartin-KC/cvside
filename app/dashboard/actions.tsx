@@ -3,14 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export function SaveJobButton({ jobId, userId }: { jobId: string; userId: string }) {
+export function SaveJobButton({ jobId, userId, isSaved = false }: { jobId: string; userId: string; isSaved?: boolean }) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  async function handleSave() {
+  async function handleToggle() {
     setLoading(true);
     try {
-      const res = await fetch('/api/dashboard/jobs/save', {
+      const endpoint = isSaved ? '/api/dashboard/jobs/unsave' : '/api/dashboard/jobs/save';
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobId }),
@@ -25,11 +26,15 @@ export function SaveJobButton({ jobId, userId }: { jobId: string; userId: string
 
   return (
     <button
-      onClick={handleSave}
+      onClick={handleToggle}
       disabled={loading}
-      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+      className={`px-4 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 ${
+        isSaved 
+          ? 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200' 
+          : 'bg-blue-600 text-white hover:bg-blue-700'
+      }`}
     >
-      {loading ? 'Saving...' : 'Save'}
+      {loading ? (isSaved ? 'Unsaving...' : 'Saving...') : (isSaved ? '✓ Saved' : 'Save')}
     </button>
   );
 }

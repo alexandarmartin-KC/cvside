@@ -12,11 +12,12 @@ type JobCardProps = {
   score?: number;
   reasons?: string[];
   isNew?: boolean;
+  isSaved?: boolean;
   appliedAt?: Date | null;
   actions?: React.ReactNode;
 };
 
-export function JobCard({ job, score, reasons, isNew, appliedAt, actions }: JobCardProps) {
+export function JobCard({ job, score, reasons, isNew, isSaved, appliedAt, actions }: JobCardProps) {
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('da-DK', {
       day: 'numeric',
@@ -34,6 +35,11 @@ export function JobCard({ job, score, reasons, isNew, appliedAt, actions }: JobC
             {isNew && (
               <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">
                 New
+              </span>
+            )}
+            {isSaved && (
+              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+                Saved
               </span>
             )}
           </div>

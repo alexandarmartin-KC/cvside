@@ -52,6 +52,12 @@ export default async function ProfilePage({
           seenJobs: {
             where: { userId },
           },
+          savedJobs: {
+            where: { userId },
+          },
+          appliedJobs: {
+            where: { userId },
+          },
         },
       },
     },
@@ -129,9 +135,15 @@ export default async function ProfilePage({
                 score={match.score}
                 reasons={match.reasons}
                 isNew={match.isNew}
+                isSaved={match.job.savedJobs?.length > 0}
+                appliedAt={match.job.appliedJobs?.[0]?.appliedAt || null}
                 actions={
                   <>
-                    <SaveJobButton jobId={match.job.id} userId={userId} />
+                    <SaveJobButton 
+                      jobId={match.job.id} 
+                      userId={userId} 
+                      isSaved={match.job.savedJobs?.length > 0}
+                    />
                     <MarkAppliedButton jobId={match.job.id} userId={userId} />
                     <button className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
                       View Details
