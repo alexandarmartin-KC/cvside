@@ -111,10 +111,10 @@ export function FilterForm({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="0">Any</option>
-            <option value="50">50%+</option>
-            <option value="70">70%+</option>
-            <option value="80">80%+</option>
-            <option value="90">90%+</option>
+            <option value="50">50+</option>
+            <option value="60">60+</option>
+            <option value="70">70+</option>
+            <option value="80">80+</option>
           </select>
         </div>
 
@@ -125,8 +125,10 @@ export function FilterForm({
             onChange={(e) => setSort(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="score">Best Match</option>
-            <option value="newest">Newest</option>
+            <option value="Best Match">Best Match</option>
+            <option value="Newest">Newest</option>
+            <option value="Oldest">Oldest</option>
+            <option value="Company A–Z">Company A–Z</option>
           </select>
         </div>
 
