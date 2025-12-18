@@ -37,6 +37,14 @@ export function JobCard({ job, score, reasons, isNew, isSaved, appliedAt, action
                 New
               </span>
             )}
+            {isSaved && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-300 bg-white/80 px-2 py-0.5 text-xs font-medium text-blue-700 ml-1">
+                <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Saved
+              </span>
+            )}
           </div>
           <p className="text-gray-600 text-sm mb-2">{job.company}</p>
           <div className="flex flex-wrap items-center gap-2 text-sm">
