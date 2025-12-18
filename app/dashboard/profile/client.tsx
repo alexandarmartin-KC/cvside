@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -27,8 +27,25 @@ export function ProfileForm({ profile }: { profile: CvProfile }) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [uploadStep, setUploadStep] = useState(0);
+  const [showProgress, setShowProgress] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  // Fade out progress indicator after completion
+  useEffect(() => {
+    if (uploadStep === 4) {
+      const timer = setTimeout(() => {
+        setShowProgress(false);
+        // Reset after fade animation completes
+        setTimeout(() => {
+          setUploadStep(0);
+          setShowProgress(true);
+        }, 500); // Duration of fade animation
+      }, 1000); // Wait 1 second before fading
+      
+      return () => clearTimeout(timer);
+    }
+  }, [uploadStep]);
 
   async function handleSave() {
     setLoading(true);
@@ -229,7 +246,11 @@ export function ProfileForm({ profile }: { profile: CvProfile }) {
 
         {/* Upload Progress Steps */}
         {uploadStep > 0 && (
-          <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div 
+            className={`mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200 transition-opacity duration-500 ${
+              showProgress ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
             <div className="flex items-center justify-between">
               {/* Step 1: Uploading */}
               <div className="flex flex-col items-center flex-1">
