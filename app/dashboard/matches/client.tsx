@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export { SaveJobButton, MarkAppliedButton } from '../actions';
+export { MarkAppliedButton } from '../actions';
 
 export function RefreshJobsButton({ userId, hasProfile }: { userId: string; hasProfile: boolean }) {
   const [loading, setLoading] = useState(false);
