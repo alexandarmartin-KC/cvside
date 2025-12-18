@@ -5,7 +5,6 @@ import React, { useRef } from 'react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-type SaveJobButtonProps = {
 export type SaveJobButtonProps = {
   isSaved: boolean;
   loading: null | 'save' | 'unsave';
