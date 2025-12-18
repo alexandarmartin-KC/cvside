@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 type SearchParams = {
   location?: string;
-  remote?: string;
+  radius?: string;
   minScore?: string;
   sort?: string;
 };
@@ -37,6 +37,7 @@ export default async function ProfilePage({
   // Get search params for job filtering
   const params = await searchParams;
   const location = params.location || '';
+  const radius = parseInt(params.radius || '0');
   const minScore = params.minScore || '';
   const sortBy = params.sort || '';
 
@@ -69,6 +70,7 @@ export default async function ProfilePage({
   // Apply deterministic filtering and sorting
   const filterResult = filterAndSortJobs(jobs, {
     location: location || null,
+    radius_km: radius || null,
     minimum_score: minScore || null,
     sort_by: sortBy || null,
   });
@@ -104,6 +106,7 @@ export default async function ProfilePage({
         {/* Filters */}
         <ProfileFilterForm
           initialLocation={filterResult.applied_filters.location || ''}
+          initialRadius={filterResult.applied_filters.radius_km || 0}
           initialMinScore={filterResult.applied_filters.minimum_score === 'Any' ? 0 : filterResult.applied_filters.minimum_score}
           initialSort={filterResult.applied_filters.sort_by}
         />
