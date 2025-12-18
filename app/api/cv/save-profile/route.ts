@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
         skills,
         locations,
         preferredLocation: preferredLocation || (locations.length > 0 ? locations[0] : null),
+        workPreference: workPreference || 'ANY',
         ...(cvFileName && {
           cvFileName,
           cvUrl: cvUrl || null,

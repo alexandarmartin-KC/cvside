@@ -54,6 +54,7 @@ export default function SignupPage() {
               skills: parsed.cvProfile.core_skills,
               locations: parsed.cvProfile.locations,
               preferredLocation: parsed.cvProfile.locations[0] || '',
+              workPreference: 'ANY',
               cvFileName: parsed.fileName || 'CV.pdf',
               cvUrl: parsed.cvDataUrl || null,
             }),
