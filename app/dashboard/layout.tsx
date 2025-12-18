@@ -72,9 +72,6 @@ export default async function DashboardLayout({
               <NavLink href="/dashboard/profile" icon="document" primary>
                 Profile & CV
               </NavLink>
-              <NavLink href="/dashboard/matches" icon="briefcase">
-                Job Matches
-              </NavLink>
               <NavLink href="/dashboard/saved" icon="bookmark">
                 Saved Jobs
               </NavLink>
@@ -95,7 +92,6 @@ export default async function DashboardLayout({
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-10">
           <div className="flex justify-around py-2">
             <MobileNavLink href="/dashboard/profile" icon="document" label="Profile" />
-            <MobileNavLink href="/dashboard/matches" icon="briefcase" label="Matches" />
             <MobileNavLink href="/dashboard/saved" icon="bookmark" label="Saved" />
             <MobileNavLink href="/dashboard/applications" icon="list" label="Applied" />
           </div>
