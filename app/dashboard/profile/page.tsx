@@ -2,10 +2,10 @@ import { requireUser } from '@/lib/auth-session';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { ProfileForm } from './client';
-import { JobCard } from '@/components/JobCard';
-import { SaveJobButton, MarkAppliedButton, RefreshJobsButton, SeedMockDataButton } from '../matches/client';
+import { RefreshJobsButton, SeedMockDataButton } from '../matches/client';
 import { ProfileFilterForm } from './filter-form';
 import { filterAndSortJobs } from '@/lib/job-filter-engine';
+import { JobCardWrapper } from './job-card-wrapper';
 
 export const dynamic = 'force-dynamic';
 
@@ -135,27 +135,15 @@ export default async function ProfilePage({
         {matchesWithNewFlag.length > 0 ? (
           <div className="grid gap-6">
             {matchesWithNewFlag.map((match) => (
-              <JobCard
+              <JobCardWrapper
                 key={match.id}
                 job={match.job}
                 score={match.score}
                 reasons={match.reasons}
                 isNew={match.isNew}
-                isSaved={match.job.savedJobs?.length > 0}
+                initialIsSaved={match.job.savedJobs?.length > 0}
                 appliedAt={match.job.appliedJobs?.[0]?.appliedAt || null}
-                actions={
-                  <>
-                    <SaveJobButton 
-                      jobId={match.job.id} 
-                      userId={userId} 
-                      isSaved={match.job.savedJobs?.length > 0}
-                    />
-                    <MarkAppliedButton jobId={match.job.id} userId={userId} />
-                    <button className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-                      View Details
-                    </button>
-                  </>
-                }
+                userId={userId}
               />
             ))}
           </div>
