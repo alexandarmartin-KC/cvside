@@ -10,6 +10,9 @@ export default async function SavedJobsPage() {
   const userId = session.user.id;
   const isTestUser = userId.startsWith('test-');
 
+  console.log('Saved Jobs Page - User ID:', userId);
+  console.log('Saved Jobs Page - User email:', session.user.email);
+
   // Try to load saved jobs even for test users if database is configured
   let savedJobs: Awaited<ReturnType<typeof prisma.savedJob.findMany<{
     where: { userId: string };
@@ -42,6 +45,8 @@ export default async function SavedJobsPage() {
         createdAt: 'desc',
       },
     });
+    console.log('Saved Jobs Page - Saved jobs count:', savedJobs.length);
+    console.log('Saved Jobs Page - Saved job IDs:', savedJobs.map(sj => ({ savedId: sj.id, jobId: sj.jobId, createdAt: sj.createdAt })));
   } catch (error) {
     console.error('Error fetching saved jobs:', error);
     savedJobs = [];
