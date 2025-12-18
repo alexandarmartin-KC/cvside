@@ -28,7 +28,6 @@ export default async function MatchesPage({
 
   const params = await searchParams;
   const location = params.location || '';
-  const remoteOnly = params.remote === 'true';
   const minScore = params.minScore || '';
   const sortBy = params.sort || '';
 
@@ -116,7 +115,6 @@ export default async function MatchesPage({
       {/* Filters */}
       <FilterForm
         initialLocation={filterResult.applied_filters.location || ''}
-        initialRemote={remoteOnly}
         initialMinScore={filterResult.applied_filters.minimum_score === 'Any' ? 0 : filterResult.applied_filters.minimum_score}
         initialSort={filterResult.applied_filters.sort_by}
       />

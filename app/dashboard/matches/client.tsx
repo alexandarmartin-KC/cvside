@@ -56,18 +56,15 @@ export function RefreshJobsButton({ userId, hasProfile }: { userId: string; hasP
 
 export function FilterForm({
   initialLocation,
-  initialRemote,
   initialMinScore,
   initialSort,
 }: {
   initialLocation: string;
-  initialRemote: boolean;
   initialMinScore: number;
   initialSort: string;
 }) {
   const router = useRouter();
   const [location, setLocation] = useState(initialLocation);
-  const [remote, setRemote] = useState(initialRemote);
   const [minScore, setMinScore] = useState(initialMinScore);
   const [sort, setSort] = useState(initialSort);
 
@@ -75,23 +72,21 @@ export function FilterForm({
     e.preventDefault();
     const params = new URLSearchParams();
     if (location) params.set('location', location);
-    if (remote) params.set('remote', 'true');
     if (minScore > 0) params.set('minScore', minScore.toString());
-    if (sort !== 'score') params.set('sort', sort);
+    if (sort !== 'Best Match') params.set('sort', sort);
     router.push(`/dashboard/matches?${params.toString()}`);
   }
 
   function handleReset() {
     setLocation('');
-    setRemote(false);
     setMinScore(0);
-    setSort('score');
+    setSort('Best Match');
     router.push('/dashboard/matches');
   }
 
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
           <input
@@ -130,18 +125,6 @@ export function FilterForm({
             <option value="Oldest">Oldest</option>
             <option value="Company A–Z">Company A–Z</option>
           </select>
-        </div>
-
-        <div className="flex items-end gap-2">
-          <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-            <input
-              type="checkbox"
-              checked={remote}
-              onChange={(e) => setRemote(e.target.checked)}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-700">Remote only</span>
-          </label>
         </div>
       </div>
 

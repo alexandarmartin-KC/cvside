@@ -37,7 +37,6 @@ export default async function ProfilePage({
   // Get search params for job filtering
   const params = await searchParams;
   const location = params.location || '';
-  const remoteOnly = params.remote === 'true';
   const minScore = params.minScore || '';
   const sortBy = params.sort || '';
 
@@ -105,7 +104,6 @@ export default async function ProfilePage({
         {/* Filters */}
         <ProfileFilterForm
           initialLocation={filterResult.applied_filters.location || ''}
-          initialRemote={remoteOnly}
           initialMinScore={filterResult.applied_filters.minimum_score === 'Any' ? 0 : filterResult.applied_filters.minimum_score}
           initialSort={filterResult.applied_filters.sort_by}
         />
