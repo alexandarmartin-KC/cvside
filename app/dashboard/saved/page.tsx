@@ -72,6 +72,9 @@ export default async function SavedJobsPage() {
     },
   });
 
+  console.log('Saved Jobs Page - Applied jobs count:', appliedJobs.length);
+  console.log('Saved Jobs Page - Applied job IDs:', appliedJobs.map(aj => aj.jobId));
+
   // Create a map for quick lookup
   const appliedJobsMap = new Map(
     appliedJobs.map(aj => [aj.jobId, aj.appliedAt])
