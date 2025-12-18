@@ -158,17 +158,28 @@ export function ProfileForm({ profile }: { profile: CvProfile }) {
 
             <div className="flex items-center gap-3">
               {profile.cvUrl ? (
-                <a
-                  href={profile.cvUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => {
+                    const win = window.open('', '_blank');
+                    if (win) {
+                      win.document.write(`
+                        <html>
+                          <head><title>${profile.cvFileName || 'CV'}</title></head>
+                          <body style="margin:0;">
+                            <iframe src="${profile.cvUrl}" style="border:none;width:100%;height:100vh;"></iframe>
+                          </body>
+                        </html>
+                      `);
+                      win.document.close();
+                    }
+                  }}
                   className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
                   Open CV (PDF)
-                </a>
+                </button>
               ) : (
                 <button
                   onClick={() => alert('CV file not available. Please re-upload your CV to enable viewing.')}
