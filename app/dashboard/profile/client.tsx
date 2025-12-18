@@ -528,6 +528,8 @@ export function ProfileForm({ profile }: { profile: CvProfile }) {
         </p>
       </div>
     </div>
+  );
+}
 
 type Job = {
   id: string;
