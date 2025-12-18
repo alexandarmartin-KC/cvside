@@ -54,7 +54,7 @@ export function SaveJobButton({ jobId, userId, isSaved = false }: { jobId: strin
           : 'bg-blue-600 text-white hover:bg-blue-700'
       }`}
     >
-      {loading ? (optimisticSaved ? 'Unsaving...' : 'Saving...') : (optimisticSaved ? 'Unsave' : 'Save')}
+      {loading ? (optimisticSaved ? 'Unsaving...' : 'Saving...') : (optimisticSaved ? 'Click to unsave' : 'Save')}
     </button>
   );
 }
