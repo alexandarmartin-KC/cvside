@@ -5,50 +5,22 @@ import React, { useRef } from 'react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export function SaveJobButton({ jobId, userId, isSaved = false }: { jobId: string; userId: string; isSaved?: boolean }) {
-  const [localSaved, setLocalSaved] = useState(isSaved);
-  const [loading, setLoading] = useState<null | 'save' | 'unsave'>(null);
-  const router = useRouter();
+type SaveJobButtonProps = {
+export type SaveJobButtonProps = {
+  isSaved: boolean;
+  loading: null | 'save' | 'unsave';
+  onToggle: () => void;
+};
 
-  // Only update localSaved from prop if prop changes and not loading
-  const prevIsSaved = useRef(isSaved);
-  React.useEffect(() => {
-    if (loading === null && isSaved !== prevIsSaved.current) {
-      setLocalSaved(isSaved);
-      prevIsSaved.current = isSaved;
-    }
-  }, [isSaved, loading]);
-
-  async function handleToggle() {
-    const next = !localSaved;
-    setLoading(next ? 'save' : 'unsave');
-    setLocalSaved(next);
-    try {
-      const endpoint = next ? '/api/dashboard/jobs/save' : '/api/dashboard/jobs/unsave';
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId }),
-      });
-      // Optionally, you can refresh in the background if you want to sync with server
-      // router.refresh();
-      // If server disagrees, revert
-      if (!res.ok) setLocalSaved(!next);
-    } catch (e) {
-      setLocalSaved(!next);
-    } finally {
-      setLoading(null);
-    }
-  }
-
+export function SaveJobButton({ isSaved, loading, onToggle }: SaveJobButtonProps) {
   let buttonText = 'Save';
   if (loading === 'save') buttonText = 'Saving...';
   else if (loading === 'unsave') buttonText = 'Unsaving...';
-  else if (localSaved) buttonText = 'Unsave';
+  else if (isSaved) buttonText = 'Unsave';
 
   return (
     <button
-      onClick={handleToggle}
+      onClick={onToggle}
       disabled={loading !== null}
       className="w-[140px] px-4 py-2 text-sm text-center bg-blue-600 text-white border border-blue-600 rounded-lg hover:bg-blue-700 hover:border-blue-700 transition-all disabled:opacity-50"
     >
