@@ -4,6 +4,7 @@ import { JobCard } from '@/components/JobCard';
 import { UnsaveJobButton, MoveToAppliedButton } from './client';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function SavedJobsPage() {
   const session = await protectRoute();
