@@ -1,7 +1,8 @@
 'use client';
 import React, { useState } from 'react';
 import { JobCard } from '@/components/JobCard';
-import { SaveJobButton, MarkAppliedButton } from './client';
+import { SaveJobButton } from '../actions';
+import { MarkAppliedButton } from './client';
 
 export function MatchesClient({
   matchesWithNewFlag,
