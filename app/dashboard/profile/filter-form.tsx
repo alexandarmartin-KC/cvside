@@ -29,7 +29,7 @@ export function ProfileFilterForm({
     }
     if (minScore > 0) params.set('minScore', minScore.toString());
     if (sort !== 'Best Match') params.set('sort', sort);
-    router.push(`/dashboard/profile?${params.toString()}`);
+    router.push(`/dashboard/profile?${params.toString()}`, { scroll: false });
   }
 
   function handleReset() {
