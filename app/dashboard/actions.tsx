@@ -4,11 +4,22 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export function SaveJobButton({ jobId, userId, isSaved = false }: { jobId: string; userId: string; isSaved?: boolean }) {
+  const [optimisticSaved, setOptimisticSaved] = useState(isSaved);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // Update optimistic state when prop changes
+  if (isSaved !== optimisticSaved && !loading) {
+    setOptimisticSaved(isSaved);
+  }
+
   async function handleToggle() {
+    const newSavedState = !optimisticSaved;
+    
+    // Optimistic update - change UI immediately
+    setOptimisticSaved(newSavedState);
     setLoading(true);
+    
     try {
       const endpoint = isSaved ? '/api/dashboard/jobs/unsave' : '/api/dashboard/jobs/save';
       const res = await fetch(endpoint, {
@@ -18,10 +29,16 @@ export function SaveJobButton({ jobId, userId, isSaved = false }: { jobId: strin
       });
       
       if (res.ok) {
+        // Silently refresh in background
         router.refresh();
+      } else {
+        // Revert on error
+        setOptimisticSaved(!newSavedState);
       }
     } catch (error) {
       console.error('Error toggling save:', error);
+      // Revert on error
+      setOptimisticSaved(!newSavedState);
     } finally {
       setLoading(false);
     }
@@ -29,9 +46,9 @@ export function SaveJobButton({ jobId, userId, isSaved = false }: { jobId: strin
 
   const getButtonText = () => {
     if (loading) {
-      return isSaved ? 'Unsaving...' : 'Saving...';
+      return optimisticSaved ? 'Unsaving...' : 'Saving...';
     }
-    return isSaved ? 'Unsave' : 'Save';
+    return optimisticSaved ? 'Unsave' : 'Save';
   };
 
   return (
