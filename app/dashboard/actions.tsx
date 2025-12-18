@@ -46,7 +46,7 @@ export function SaveJobButton({ jobId, userId, isSaved = false }: { jobId: strin
 
   const getButtonText = () => {
     if (loading) {
-      return optimisticSaved ? 'Unsaving...' : 'Saving...';
+      return optimisticSaved ? 'Saving...' : 'Unsaving...';
     }
     return optimisticSaved ? 'Unsave' : 'Save';
   };
