@@ -71,9 +71,13 @@ export function MoveToAppliedButton({
         body: JSON.stringify({ jobId }),
       });
       if (res.ok) {
-        router.refresh();
+        window.location.reload();
+      } else {
+        console.error('Failed to unmark job:', await res.text());
+        setLoading(false);
       }
-    } finally {
+    } catch (error) {
+      console.error('Error unmarking job:', error);
       setLoading(false);
     }
   }
