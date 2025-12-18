@@ -3,7 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { ProfileForm } from './client';
 import { JobCard } from '@/components/JobCard';
-import { SaveJobButton, MarkAppliedButton, RefreshJobsButton, SeedMockDataButton } from '../matches/client';
+import { SaveJobButton } from '../actions';
+import { MarkAppliedButton, RefreshJobsButton, SeedMockDataButton } from '../matches/client';
 import { ProfileFilterForm } from './filter-form';
 import { filterAndSortJobs } from '@/lib/job-filter-engine';
 
