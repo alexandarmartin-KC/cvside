@@ -57,6 +57,11 @@ export default async function ProfilePage({
     },
   });
 
+  console.log('=== PROFILE PAGE DEBUG ===');
+  console.log('User ID:', userId);
+  console.log('Total matches found:', allMatches.length);
+  console.log('CV Profile:', cvProfile.title, '-', cvProfile.seniority);
+
   // Transform to filtering engine format
   const jobs = allMatches.map(match => ({
     job_id: match.job.id,
@@ -100,7 +105,10 @@ export default async function ProfilePage({
               {matchesWithNewFlag.length} job{matchesWithNewFlag.length !== 1 ? 's' : ''} matching your profile
             </p>
           </div>
-          <RefreshJobsButton userId={userId} hasProfile={true} />
+          <div className="flex items-center gap-3">
+            <SeedMockDataButton />
+            <RefreshJobsButton userId={userId} hasProfile={true} />
+          </div>
         </div>
 
         {/* Filters */}
