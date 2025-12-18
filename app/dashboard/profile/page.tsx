@@ -1,8 +1,9 @@
 import { requireUser } from '@/lib/auth-session';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
-import { ProfileForm, JobCardWrapper } from './client';
-import { RefreshJobsButton, SeedMockDataButton } from '../matches/client';
+import { ProfileForm } from './client';
+import { JobCard } from '@/components/JobCard';
+import { SaveJobButton, MarkAppliedButton, RefreshJobsButton, SeedMockDataButton } from '../matches/client';
 import { ProfileFilterForm } from './filter-form';
 import { filterAndSortJobs } from '@/lib/job-filter-engine';
 
