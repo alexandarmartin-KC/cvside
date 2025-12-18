@@ -293,7 +293,7 @@ export default function UploadPage() {
           locations: cvData ? dataToSave.cvProfile.locations : manualLocations,
           preferredLocation: cvData ? (dataToSave.cvProfile.locations[0] || '') : preferredLocation,
           workPreference: 'ANY',
-          cvFileName: dataToSave.fileName || file?.name || 'CV.pdf',
+          cvFileName: file?.name || 'CV.pdf',
           cvUrl: dataToSave.cvDataUrl || null,
         }),
       });
