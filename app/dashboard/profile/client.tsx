@@ -141,11 +141,11 @@ export function ProfileForm({ profile }: { profile: CvProfile }) {
         setTitle(parseData.cvProfile.title);
         setSummary(parseData.cvProfile.summary);
         
-        // Brief delay to show completion
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // Wait for progress indicator to show and fade
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Refresh the page to get updated profile data
-        router.refresh();
+        // Soft refresh - reload the page without losing session
+        window.location.reload();
       } else {
         throw new Error('Failed to save CV profile');
       }
