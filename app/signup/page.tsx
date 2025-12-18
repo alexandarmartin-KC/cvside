@@ -37,13 +37,37 @@ export default function SignupPage() {
       // Check if there's pending CV data
       const hasPendingCV = localStorage.getItem('pendingCvData');
       
-      // Redirect to upload page if there's pending CV data (will be processed there)
-      // Otherwise go to dashboard
+      // If there's pending CV, save it before redirecting
       if (hasPendingCV) {
-        window.location.href = '/upload';
-      } else {
-        window.location.href = '/dashboard';
+        try {
+          const parsed = JSON.parse(hasPendingCV);
+          
+          // Save the CV profile
+          const saveResponse = await fetch('/api/cv/save-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: parsed.cvProfile.name,
+              title: parsed.cvProfile.title,
+              seniority: parsed.cvProfile.seniority_level,
+              summary: parsed.cvProfile.summary,
+              skills: parsed.cvProfile.core_skills,
+              locations: parsed.cvProfile.locations,
+              preferredLocation: parsed.cvProfile.locations[0] || '',
+              cvFileName: parsed.fileName || 'CV.pdf',
+            }),
+          });
+          
+          if (saveResponse.ok) {
+            localStorage.removeItem('pendingCvData');
+          }
+        } catch (error) {
+          console.error('Failed to save pending CV:', error);
+        }
       }
+      
+      // Always redirect to dashboard after signup
+      window.location.href = '/dashboard';
     } catch (err) {
       setError('An error occurred. Please try again.');
       setLoading(false);

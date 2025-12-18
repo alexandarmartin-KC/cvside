@@ -112,10 +112,6 @@ export default function UploadPage() {
                 console.log('Pending CV profile saved successfully');
                 localStorage.removeItem('pendingCvData');
                 setProfileSaved(true);
-                // Redirect to dashboard after saving pending CV
-                setTimeout(() => {
-                  window.location.href = '/dashboard/profile';
-                }, 1000);
               }
             } catch (error) {
               console.error('Failed to save pending CV data:', error);
