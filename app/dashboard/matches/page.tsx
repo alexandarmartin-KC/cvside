@@ -143,7 +143,7 @@ export default async function MatchesPage({
                     isSaved={match.job.savedJobs && match.job.savedJobs.length > 0}
                   />
                   <MarkAppliedButton jobId={match.job.id} userId={userId} />
-                  <button className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                  <button className="min-w-[120px] px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
                     View Details
                   </button>
                 </>

@@ -39,7 +39,7 @@ export function SaveJobButton({ jobId, userId, isSaved = false }: { jobId: strin
       <button
         onClick={handleToggle}
         disabled={loading}
-        className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all disabled:opacity-50"
+        className="min-w-[120px] px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all disabled:opacity-50"
       >
         {getButtonText()}
       </button>
@@ -74,7 +74,7 @@ export function MarkAppliedButton({ jobId, userId }: { jobId: string; userId: st
     <button
       onClick={handleApply}
       disabled={loading}
-      className="px-4 py-2 text-sm text-green-700 border border-green-300 rounded-lg hover:bg-green-50 transition-colors disabled:opacity-50"
+      className="min-w-[120px] px-4 py-2 text-sm text-green-700 border border-green-300 rounded-lg hover:bg-green-50 transition-colors disabled:opacity-50"
     >
       {loading ? 'Marking...' : 'Mark Applied'}
     </button>
