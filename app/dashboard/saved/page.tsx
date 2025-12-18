@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma';
 import { JobCard } from '@/components/JobCard';
 import { UnsaveJobButton, MoveToAppliedButton } from './client';
 
+export const dynamic = 'force-dynamic';
+
 export default async function SavedJobsPage() {
   const session = await protectRoute();
   const userId = session.user.id;

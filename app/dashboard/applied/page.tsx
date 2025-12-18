@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { AppliedJobCard, UpdateStatusModal } from './client';
 import type { AppliedJobStatus } from '@prisma/client';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AppliedJobsPage() {
   const session = await auth();
   if (!session?.user) {

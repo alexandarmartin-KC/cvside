@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { JobCard } from '@/components/JobCard';
 import { SaveJobButton, MarkAppliedButton, RefreshJobsButton, FilterForm } from './client';
 
+export const dynamic = 'force-dynamic';
+
 type SearchParams = {
   location?: string;
   remote?: string;
