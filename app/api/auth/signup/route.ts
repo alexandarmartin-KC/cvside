@@ -66,12 +66,14 @@ export async function POST(request: Request) {
     
     // More detailed error for debugging
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
     console.error('Detailed error:', errorMessage);
+    console.error('Error stack:', errorStack);
     
     return NextResponse.json(
       { 
-        error: 'Failed to create account',
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        error: 'Failed to create account. Please try again.',
+        details: errorMessage
       },
       { status: 500 }
     );
