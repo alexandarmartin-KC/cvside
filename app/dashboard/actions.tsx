@@ -39,7 +39,7 @@ export function SaveJobButton({ jobId, userId, isSaved = false }: { jobId: strin
       <button
         onClick={handleToggle}
         disabled={loading}
-        className="w-[140px] px-4 py-2 text-sm text-center bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all disabled:opacity-50"
+        className="w-[140px] px-4 py-2 text-sm text-center bg-blue-600 text-white border border-blue-600 rounded-lg hover:bg-blue-700 hover:border-blue-700 transition-all disabled:opacity-50"
       >
         {getButtonText()}
       </button>

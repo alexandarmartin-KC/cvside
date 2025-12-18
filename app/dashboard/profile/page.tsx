@@ -151,7 +151,7 @@ export default async function ProfilePage({
                       isSaved={match.job.savedJobs?.length > 0}
                     />
                     <MarkAppliedButton jobId={match.job.id} userId={userId} />
-                    <button className="w-[140px] px-4 py-2 text-sm text-center text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                    <button className="w-[140px] px-4 py-2 text-sm text-center text-gray-700 border border-gray-300 hover:bg-gray-100 rounded-lg transition-colors">
                       View Details
                     </button>
                   </>
