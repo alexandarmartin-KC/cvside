@@ -25,7 +25,8 @@ export async function POST(req: NextRequest) {
       skills, 
       locations, 
       preferredLocation,
-      cvFileName 
+      cvFileName,
+      workPreference
     } = body;
 
     // Validate input
@@ -51,6 +52,9 @@ export async function POST(req: NextRequest) {
         skills,
         locations,
         preferredLocation: preferredLocation || (locations.length > 0 ? locations[0] : null),
+        cvFileName: cvFileName || null,
+        cvUploadedAt: cvFileName ? new Date() : null,
+        workPreference: workPreference || 'ANY',
       },
       update: {
         name,
@@ -60,6 +64,10 @@ export async function POST(req: NextRequest) {
         skills,
         locations,
         preferredLocation: preferredLocation || (locations.length > 0 ? locations[0] : null),
+        ...(cvFileName && {
+          cvFileName,
+          cvUploadedAt: new Date(),
+        }),
         updatedAt: new Date(),
       },
     });

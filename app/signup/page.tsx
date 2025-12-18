@@ -34,9 +34,16 @@ export default function SignupPage() {
         return;
       }
 
-      // Redirect to dashboard after successful signup
-      // Use window.location to ensure cookie is sent with next request
-      window.location.href = '/dashboard';
+      // Check if there's pending CV data
+      const hasPendingCV = localStorage.getItem('pendingCvData');
+      
+      // Redirect to upload page if there's pending CV data (will be processed there)
+      // Otherwise go to dashboard
+      if (hasPendingCV) {
+        window.location.href = '/upload';
+      } else {
+        window.location.href = '/dashboard';
+      }
     } catch (err) {
       setError('An error occurred. Please try again.');
       setLoading(false);
