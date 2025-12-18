@@ -5,21 +5,39 @@ import { useRouter } from 'next/navigation';
 
 export function SaveJobButton({ jobId, userId, isSaved = false }: { jobId: string; userId: string; isSaved?: boolean }) {
   const [loading, setLoading] = useState(false);
+  const [optimisticSaved, setOptimisticSaved] = useState(isSaved);
   const router = useRouter();
 
+  // Update optimistic state when prop changes
+  useState(() => {
+    setOptimisticSaved(isSaved);
+  });
+
   async function handleToggle() {
+    // Optimistically update UI immediately
+    const newSavedState = !optimisticSaved;
+    setOptimisticSaved(newSavedState);
     setLoading(true);
+
     try {
-      const endpoint = isSaved ? '/api/dashboard/jobs/unsave' : '/api/dashboard/jobs/save';
+      const endpoint = optimisticSaved ? '/api/dashboard/jobs/unsave' : '/api/dashboard/jobs/save';
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobId }),
       });
-      if (res.ok) {
-        router.refresh();
+      
+      if (!res.ok) {
+        // Revert on error
+        setOptimisticSaved(!newSavedState);
+        console.error('Failed to toggle save status');
+      } else {
+        // Background refresh without blocking UI
+        setTimeout(() => router.refresh(), 100);
       }
     } catch (error) {
+      // Revert on error
+      setOptimisticSaved(!newSavedState);
       console.error('Error toggling save:', error);
     } finally {
       setLoading(false);
@@ -30,13 +48,13 @@ export function SaveJobButton({ jobId, userId, isSaved = false }: { jobId: strin
     <button
       onClick={handleToggle}
       disabled={loading}
-      className={`px-4 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 ${
-        isSaved 
+      className={`px-4 py-2 text-sm rounded-lg transition-all disabled:opacity-50 ${
+        optimisticSaved 
           ? 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200' 
           : 'bg-blue-600 text-white hover:bg-blue-700'
       }`}
     >
-      {loading ? (isSaved ? 'Unsaving...' : 'Saving...') : (isSaved ? 'Unsave' : 'Save')}
+      {loading ? (optimisticSaved ? 'Unsaving...' : 'Saving...') : (optimisticSaved ? 'Unsave' : 'Save')}
     </button>
   );
 }
