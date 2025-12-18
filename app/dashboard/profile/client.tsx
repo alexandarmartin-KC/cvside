@@ -136,41 +136,66 @@ export function ProfileForm({ profile }: { profile: CvProfile }) {
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-1">Base CV</h2>
         <p className="text-sm text-gray-500 mb-6">
-          This CV is used to generate your base profile and match jobs.
+          This CV is used as your base for job matching.
         </p>
 
         {profile.cvFileName ? (
-          <div className="bg-gray-50 rounded-lg p-4 mb-4">
-            <div className="flex items-start gap-3">
-              <svg className="w-10 h-10 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <div className="flex-1">
-                <p className="font-medium text-gray-900">{profile.cvFileName}</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Uploaded {formatDate(profile.cvUploadedAt)}
-                </p>
+          <>
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <svg className="w-10 h-10 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">{profile.cvFileName}</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Uploaded {formatDate(profile.cvUploadedAt)}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+
+            <div className="flex items-center gap-3">
+              <a
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  alert('CV preview not yet available. Please use Replace CV to update your profile.');
+                }}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                Open CV (PDF)
+              </a>
+              <Link
+                href="/upload"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Replace CV
+              </Link>
+            </div>
+          </>
         ) : (
-          <div className="bg-gray-50 rounded-lg p-4 mb-4 text-center">
-            <p className="text-gray-500">No CV file information available</p>
+          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mb-6">
+            <p className="text-gray-600 mb-4">No CV available. Upload one to get started with job matching.</p>
+            <Link
+              href="/upload"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              Upload CV
+            </Link>
           </div>
         )}
-
-        <Link
-          href="/upload"
-          className="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-          </svg>
-          Replace CV
-        </Link>
-        <p className="text-xs text-gray-500 mt-2">
-          Uploading a new CV will replace your base profile and update job matches.
-        </p>
       </div>
 
       {/* Card 3: Work Preference */}
