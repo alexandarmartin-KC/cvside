@@ -6,8 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // NextAuth.js Models
@@ -44,17 +44,17 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
-  passwordHash  String?   // For custom password auth
+  passwordHash  String? // For custom password auth
   accounts      Account[]
   sessions      Session[]
 
   // App relations
-  cvProfile       CvProfile?
-  jobMatches      JobMatch[]
-  savedJobs       SavedJob[]
-  appliedJobs     AppliedJob[]
-  seenJobs        SeenJob[]
-  resetTokens     PasswordResetToken[]
+  cvProfile   CvProfile?
+  jobMatches  JobMatch[]
+  savedJobs   SavedJob[]
+  appliedJobs AppliedJob[]
+  seenJobs    SeenJob[]
+  resetTokens PasswordResetToken[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -69,22 +69,22 @@ model VerificationToken {
 }
 
 model PasswordResetToken {
-  id         String   @id @default(cuid())
-  tokenHash  String   @unique
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
   @@index([userId])
 }
 
 // Application Models
 model CvProfile {
-  id                String   @id @default(cuid())
-  userId            String   @unique
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   name              String?
   title             String?
   seniority         String?
@@ -92,19 +92,19 @@ model CvProfile {
   skills            String[] // Array of strings
   locations         String[] // Array of strings
   preferredLocation String?
-  
-  workPreference    String?  @default("ANY")
-  cvFileName        String?
-  cvUploadedAt      DateTime?
-  cvUrl             String?  @db.Text
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+
+  workPreference String?   @default("ANY")
+  cvFileName     String?
+  cvUploadedAt   DateTime?
+  cvUrl          String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Job {
   id          String   @id @default(cuid())
-  source      String   // e.g., "LinkedIn", "Indeed", "Mock"
+  source      String // e.g., "LinkedIn", "Indeed", "Mock"
   sourceUrl   String?  @db.Text
   title       String
   company     String
@@ -112,9 +112,9 @@ model Job {
   remote      Boolean  @default(false)
   description String   @db.Text
   skills      String[] // Array of strings
-  
-  createdAt   DateTime @default(now())
-  
+
+  createdAt DateTime @default(now())
+
   // Relations
   jobMatches  JobMatch[]
   savedJobs   SavedJob[]
@@ -125,49 +125,49 @@ model Job {
 }
 
 model JobMatch {
-  id        String   @id @default(cuid())
-  userId    String
-  jobId     String
-  score     Int      // 0-100
-  reasons   String[] // Array of reason strings
-  
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  
+  id      String   @id @default(cuid())
+  userId  String
+  jobId   String
+  score   Int // 0-100
+  reasons String[] // Array of reason strings
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
-  
+
   @@unique([userId, jobId])
   @@index([userId, score])
 }
 
 model SavedJob {
-  id        String   @id @default(cuid())
-  userId    String
-  jobId     String
-  
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  userId String
+  jobId  String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
-  
+
   @@unique([userId, jobId])
   @@index([userId, createdAt])
 }
 
 model AppliedJob {
-  id         String           @id @default(cuid())
-  userId     String
-  jobId      String
-  status     AppliedJobStatus @default(SAVED)
-  appliedAt  DateTime?
-  notes      String?          @db.Text
-  
-  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  job        Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
-  
+  id        String           @id @default(cuid())
+  userId    String
+  jobId     String
+  status    AppliedJobStatus @default(SAVED)
+  appliedAt DateTime?
+  notes     String?          @db.Text
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([userId, jobId])
   @@index([userId, status])
 }
@@ -185,10 +185,10 @@ model SeenJob {
   userId String
   jobId  String
   seenAt DateTime @default(now())
-  
-  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  job    Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
   @@unique([userId, jobId])
   @@index([userId, seenAt])
 }

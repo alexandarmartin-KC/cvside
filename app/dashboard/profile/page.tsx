@@ -2,9 +2,8 @@ import { requireUser } from '@/lib/auth-session';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { ProfileForm } from './client';
-import { JobCard } from '@/components/JobCard';
-import { SaveJobButton } from '../actions';
-import { MarkAppliedButton, RefreshJobsButton, SeedMockDataButton } from '../matches/client';
+import { RefreshJobsButton, SeedMockDataButton } from '../matches/client';
+import { ProfileJobsClient } from './ProfileJobsClient';
 import { ProfileFilterForm } from './filter-form';
 import { filterAndSortJobs } from '@/lib/job-filter-engine';
 
@@ -28,6 +27,23 @@ export default async function ProfilePage({
   // Fetch user's CV profile
   const cvProfile = await prisma.cvProfile.findUnique({
     where: { userId: user.id },
+    select: {
+      id: true,
+      name: true,
+      createdAt: true,
+      updatedAt: true,
+      userId: true,
+      title: true,
+      seniority: true,
+      summary: true,
+      skills: true,
+      locations: true,
+      preferredLocation: true,
+      workPreference: true,
+      cvFileName: true,
+      cvUploadedAt: true,
+      cvUrl: true,
+    },
   });
 
   // If no profile, redirect to upload
@@ -134,32 +150,7 @@ export default async function ProfilePage({
 
         {/* Job List */}
         {matchesWithNewFlag.length > 0 ? (
-          <div className="grid gap-6">
-            {matchesWithNewFlag.map((match) => (
-              <JobCard
-                key={match.id}
-                job={match.job}
-                score={match.score}
-                reasons={match.reasons}
-                isNew={match.isNew}
-                isSaved={match.job.savedJobs?.length > 0}
-                appliedAt={match.job.appliedJobs?.[0]?.appliedAt || null}
-                actions={
-                  <>
-                    <SaveJobButton 
-                      jobId={match.job.id} 
-                      userId={userId} 
-                      isSaved={match.job.savedJobs?.length > 0}
-                    />
-                    <MarkAppliedButton jobId={match.job.id} userId={userId} />
-                    <button className="w-[140px] px-4 py-2 text-sm text-center text-gray-700 border border-gray-300 hover:bg-gray-100 rounded-lg transition-colors">
-                      View Details
-                    </button>
-                  </>
-                }
-              />
-            ))}
-          </div>
+          <ProfileJobsClient matches={matchesWithNewFlag} userId={userId} />
         ) : (
           <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
             <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
