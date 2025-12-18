@@ -27,14 +27,26 @@ export function SaveJobButton({ jobId, userId, isSaved = false }: { jobId: strin
     }
   }
 
+  const getButtonText = () => {
+    if (loading) {
+      return isSaved ? 'Unsaving...' : 'Saving...';
+    }
+    return isSaved ? 'Saved' : 'Save';
+  };
+
   return (
-    <button
-      onClick={handleToggle}
-      disabled={loading}
-      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-    >
-      {loading ? (isSaved ? 'Unsaving...' : 'Saving...') : (isSaved ? 'Unsave' : 'Save')}
-    </button>
+    <div className="flex flex-col items-start gap-1">
+      <button
+        onClick={handleToggle}
+        disabled={loading}
+        className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all disabled:opacity-50"
+      >
+        {getButtonText()}
+      </button>
+      {isSaved && !loading && (
+        <span className="text-xs text-gray-500 ml-1">Click to unsave</span>
+      )}
+    </div>
   );
 }
 
