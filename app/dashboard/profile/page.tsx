@@ -1,11 +1,10 @@
 import { requireUser } from '@/lib/auth-session';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
-import { ProfileForm } from './client';
+import { ProfileForm, JobCardWrapper } from './client';
 import { RefreshJobsButton, SeedMockDataButton } from '../matches/client';
 import { ProfileFilterForm } from './filter-form';
 import { filterAndSortJobs } from '@/lib/job-filter-engine';
-import { JobCardWrapper } from './job-card-wrapper';
 
 export const dynamic = 'force-dynamic';
 

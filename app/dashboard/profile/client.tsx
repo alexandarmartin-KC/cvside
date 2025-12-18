@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { JobCard } from '@/components/JobCard';
+import { MarkAppliedButton } from '../matches/client';
 
 type CvProfile = {
   id: string;
@@ -526,5 +528,105 @@ export function ProfileForm({ profile }: { profile: CvProfile }) {
         </p>
       </div>
     </div>
+
+type Job = {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  remote: boolean;
+  skills: string[];
+};
+
+export function JobCardWrapper({
+  job,
+  score,
+  reasons,
+  isNew,
+  initialIsSaved,
+  appliedAt,
+  userId,
+}: {
+  job: Job;
+  score: number;
+  reasons: string[];
+  isNew: boolean;
+  initialIsSaved: boolean;
+  appliedAt: Date | null;
+  userId: string;
+}) {
+  const [optimisticSaved, setOptimisticSaved] = useState(initialIsSaved);
+  const [loading, setLoading] = useState(false);
+  const [actionType, setActionType] = useState<'saving' | 'unsaving' | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    setOptimisticSaved(initialIsSaved);
+  }, [initialIsSaved]);
+
+  async function handleToggle() {
+    const wasSaved = optimisticSaved;
+    setActionType(wasSaved ? 'unsaving' : 'saving');
+    setOptimisticSaved(!wasSaved);
+    setLoading(true);
+
+    try {
+      const endpoint = wasSaved ? '/api/dashboard/jobs/unsave' : '/api/dashboard/jobs/save';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: job.id }),
+      });
+      
+      if (!res.ok) {
+        setOptimisticSaved(wasSaved);
+      } else {
+        setTimeout(() => router.refresh(), 100);
+      }
+    } catch (error) {
+      setOptimisticSaved(wasSaved);
+    } finally {
+      setLoading(false);
+      setActionType(null);
+    }
+  }
+
+  const getButtonText = () => {
+    if (loading && actionType) {
+      return actionType === 'saving' ? 'Saving...' : 'Unsaving...';
+    }
+    return optimisticSaved ? 'Click to unsave' : 'Save';
+  };
+
+  return (
+    <JobCard
+      job={job}
+      score={score}
+      reasons={reasons}
+      isNew={isNew}
+      isSaved={optimisticSaved}
+      appliedAt={appliedAt}
+      actions={
+        <>
+          <button
+            onClick={handleToggle}
+            disabled={loading}
+            className={`px-4 py-2 text-sm rounded-lg transition-all disabled:opacity-50 ${
+              optimisticSaved 
+                ? 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200' 
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            {getButtonText()}
+          </button>
+          <MarkAppliedButton jobId={job.id} userId={userId} />
+          <button className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+            View Details
+          </button>
+        </>
+      }
+    />
+  );
+}
   );
 }
