@@ -5,6 +5,7 @@ import { ProfileForm } from './client';
 import { JobCard } from '@/components/JobCard';
 import { SaveJobButton, MarkAppliedButton, RefreshJobsButton } from '../matches/client';
 import { ProfileFilterForm } from './filter-form';
+import { filterAndSortJobs } from '@/lib/job-filter-engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,31 +38,14 @@ export default async function ProfilePage({
   const params = await searchParams;
   const location = params.location || '';
   const remoteOnly = params.remote === 'true';
-  const minScore = parseInt(params.minScore || '0');
-  const sortBy = params.sort || 'score';
+  const minScore = params.minScore || '';
+  const sortBy = params.sort || '';
 
-  // Build where clause for job matches
-  const whereClause: any = {
-    userId,
-  };
-
-  if (minScore > 0) {
-    whereClause.score = { gte: minScore };
-  }
-
-  if (location || remoteOnly) {
-    whereClause.job = {};
-    if (location) {
-      whereClause.job.location = { contains: location, mode: 'insensitive' };
-    }
-    if (remoteOnly) {
-      whereClause.job.remote = true;
-    }
-  }
-
-  // Fetch job matches
-  const matches = await prisma.jobMatch.findMany({
-    where: whereClause,
+  // Fetch ALL job matches (no filtering at DB level)
+  const allMatches = await prisma.jobMatch.findMany({
+    where: {
+      userId,
+    },
     include: {
       job: {
         include: {
@@ -71,10 +55,32 @@ export default async function ProfilePage({
         },
       },
     },
-    orderBy: sortBy === 'newest' ? { createdAt: 'desc' } : { score: 'desc' },
   });
 
-  const matchesWithNewFlag = matches.map((match) => ({
+  // Transform to filtering engine format
+  const jobs = allMatches.map(match => ({
+    job_id: match.job.id,
+    title: match.job.title,
+    company: match.job.company,
+    location: match.job.location,
+    score: match.score,
+    posted_at: match.job.postedAt?.toISOString() || null,
+  }));
+
+  // Apply deterministic filtering and sorting
+  const filterResult = filterAndSortJobs(jobs, {
+    location: location || null,
+    minimum_score: minScore || null,
+    sort_by: sortBy || null,
+  });
+
+  // Map filtered jobs back to matches with full data
+  const filteredJobIds = new Set(filterResult.filtered_jobs.map(j => j.job_id));
+  const orderedMatches = filterResult.filtered_jobs
+    .map(filteredJob => allMatches.find(m => m.job.id === filteredJob.job_id)!)
+    .filter(Boolean);
+
+  const matchesWithNewFlag = orderedMatches.map((match) => ({
     ...match,
     isNew: match.job.seenJobs.length === 0,
   }));
@@ -90,7 +96,7 @@ export default async function ProfilePage({
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Job Matches</h2>
             <p className="text-gray-600 mt-1">
-              {matches.length} job{matches.length !== 1 ? 's' : ''} matching your profile
+              {matchesWithNewFlag.length} job{matchesWithNewFlag.length !== 1 ? 's' : ''} matching your profile
             </p>
           </div>
           <RefreshJobsButton userId={userId} hasProfile={true} />
@@ -98,10 +104,10 @@ export default async function ProfilePage({
 
         {/* Filters */}
         <ProfileFilterForm
-          initialLocation={location}
+          initialLocation={filterResult.applied_filters.location || ''}
           initialRemote={remoteOnly}
-          initialMinScore={minScore}
-          initialSort={sortBy}
+          initialMinScore={filterResult.applied_filters.minimum_score === 'Any' ? 0 : filterResult.applied_filters.minimum_score}
+          initialSort={filterResult.applied_filters.sort_by}
         />
 
         {/* Job List */}

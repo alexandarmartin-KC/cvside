@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { JobCard } from '@/components/JobCard';
 import { SaveJobButton, MarkAppliedButton, RefreshJobsButton, FilterForm } from './client';
+import { filterAndSortJobs } from '@/lib/job-filter-engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,8 +29,8 @@ export default async function MatchesPage({
   const params = await searchParams;
   const location = params.location || '';
   const remoteOnly = params.remote === 'true';
-  const minScore = parseInt(params.minScore || '0');
-  const sortBy = params.sort || 'score'; // 'score' or 'newest'
+  const minScore = params.minScore || '';
+  const sortBy = params.sort || '';
 
   // For test users, show empty state
   if (isTestUser) {
@@ -52,27 +53,11 @@ export default async function MatchesPage({
     );
   }
 
-  // Build where clause
-  const whereClause: any = {
-    userId,
-  };
-
-  if (minScore > 0) {
-    whereClause.score = { gte: minScore };
-  }
-
-  if (location || remoteOnly) {
-    whereClause.job = {};
-    if (location) {
-      whereClause.job.location = { contains: location, mode: 'insensitive' };
-    }
-    if (remoteOnly) {
-      whereClause.job.remote = true;
-    }
-  }
-
-  const matches = await prisma.jobMatch.findMany({
-    where: whereClause,
+  // Fetch ALL job matches (no filtering at DB level)
+  const allMatches = await prisma.jobMatch.findMany({
+    where: {
+      userId,
+    },
     include: {
       job: {
         include: {
@@ -82,14 +67,35 @@ export default async function MatchesPage({
         },
       },
     },
-    orderBy: sortBy === 'newest' ? { createdAt: 'desc' } : { score: 'desc' },
   });
 
   const cvProfile = await prisma.cvProfile.findUnique({
     where: { userId },
   });
 
-  const matchesWithNewFlag = matches.map((match) => ({
+  // Transform to filtering engine format
+  const jobs = allMatches.map(match => ({
+    job_id: match.job.id,
+    title: match.job.title,
+    company: match.job.company,
+    location: match.job.location,
+    score: match.score,
+    posted_at: match.job.postedAt?.toISOString() || null,
+  }));
+
+  // Apply deterministic filtering and sorting
+  const filterResult = filterAndSortJobs(jobs, {
+    location: location || null,
+    minimum_score: minScore || null,
+    sort_by: sortBy || null,
+  });
+
+  // Map filtered jobs back to matches with full data
+  const orderedMatches = filterResult.filtered_jobs
+    .map(filteredJob => allMatches.find(m => m.job.id === filteredJob.job_id)!)
+    .filter(Boolean);
+
+  const matchesWithNewFlag = orderedMatches.map((match) => ({
     ...match,
     isNew: match.job.seenJobs.length === 0,
   }));
@@ -101,7 +107,7 @@ export default async function MatchesPage({
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Job Matches</h1>
           <p className="text-gray-600 mt-1">
-            {matches.length} job{matches.length !== 1 ? 's' : ''} matching your profile
+            {matchesWithNewFlag.length} job{matchesWithNewFlag.length !== 1 ? 's' : ''} matching your profile
           </p>
         </div>
         <RefreshJobsButton userId={userId} hasProfile={!!cvProfile} />
@@ -109,10 +115,10 @@ export default async function MatchesPage({
 
       {/* Filters */}
       <FilterForm
-        initialLocation={location}
+        initialLocation={filterResult.applied_filters.location || ''}
         initialRemote={remoteOnly}
-        initialMinScore={minScore}
-        initialSort={sortBy}
+        initialMinScore={filterResult.applied_filters.minimum_score === 'Any' ? 0 : filterResult.applied_filters.minimum_score}
+        initialSort={filterResult.applied_filters.sort_by}
       />
 
       {/* Job List */}
