@@ -1,6 +1,6 @@
 
 'use client';
-import React from 'react';
+import React, { useRef } from 'react';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -10,9 +10,13 @@ export function SaveJobButton({ jobId, userId, isSaved = false }: { jobId: strin
   const [loading, setLoading] = useState<null | 'save' | 'unsave'>(null);
   const router = useRouter();
 
-  // Keep localSaved in sync with prop if not loading
+  // Only update localSaved from prop if prop changes and not loading
+  const prevIsSaved = useRef(isSaved);
   React.useEffect(() => {
-    if (loading === null) setLocalSaved(isSaved);
+    if (loading === null && isSaved !== prevIsSaved.current) {
+      setLocalSaved(isSaved);
+      prevIsSaved.current = isSaved;
+    }
   }, [isSaved, loading]);
 
   async function handleToggle() {
@@ -26,8 +30,8 @@ export function SaveJobButton({ jobId, userId, isSaved = false }: { jobId: strin
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobId }),
       });
-      // Always refresh to get server state
-      router.refresh();
+      // Optionally, you can refresh in the background if you want to sync with server
+      // router.refresh();
       // If server disagrees, revert
       if (!res.ok) setLocalSaved(!next);
     } catch (e) {
