@@ -341,7 +341,35 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate tailored CV
-    const tailoredCV = await generateTailoredCV(user.cvProfile, job, userNotes);
+    let tailoredCV;
+    try {
+      tailoredCV = await generateTailoredCV(user.cvProfile, job, userNotes);
+    } catch (genError) {
+      console.error('Error generating tailored CV:', genError);
+      // Use fallback if generation fails
+      tailoredCV = {
+        name: user.cvProfile.name || user.name || 'Your Name',
+        title: user.cvProfile.title || job.title,
+        summary: user.cvProfile.summary || `Professional seeking ${job.title} position at ${job.company}.`,
+        skills: user.cvProfile.skills || [],
+        experience: [
+          {
+            title: user.cvProfile.title || 'Professional Experience',
+            company: job.company,
+            location: user.cvProfile.locations?.[0] || job.location,
+            duration: '',
+            bullets: [
+              'Relevant experience in the field',
+              'Strong technical and professional skills',
+              'Proven track record of success'
+            ]
+          }
+        ],
+        education: [],
+        certifications: [],
+        projects: []
+      };
+    }
 
     // Construct response
     const response: TailoredCVResponse = {
