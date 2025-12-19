@@ -608,6 +608,7 @@ export function JobCardWrapper({
       isNew={isNew}
       isSaved={optimisticSaved}
       appliedAt={appliedAt}
+      showTailorButton={false}
       actions={
         <>
           <button

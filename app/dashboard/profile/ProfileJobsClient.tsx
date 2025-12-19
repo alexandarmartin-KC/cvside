@@ -51,6 +51,7 @@ export function ProfileJobsClient({
           isNew={match.isNew}
           isSaved={savedMap[match.job.id]}
           appliedAt={match.job.appliedJobs?.[0]?.appliedAt || null}
+          showTailorButton={false}
           actions={
             <>
               <SaveJobButton
