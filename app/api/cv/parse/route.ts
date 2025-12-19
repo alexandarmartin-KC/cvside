@@ -260,93 +260,148 @@ function extractBasicInfoFromText(text: string) {
   
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
   
-  // Try to find name (usually in first few lines, often capitalized)
+  // Try to find name - look more carefully in first 15 lines
   let name = "Professional"; // Default if not found
-  for (let i = 0; i < Math.min(10, lines.length); i++) {
+  for (let i = 0; i < Math.min(15, lines.length); i++) {
     const line = lines[i];
-    // Look for lines with 2-4 capitalized words, length 5-50 chars
-    if (line.match(/^[A-ZÆØÅ][a-zæøå]+(\s+[A-ZÆØÅ][a-zæøå]+){1,3}$/) && line.length >= 5 && line.length <= 50) {
-      // Skip common headers
-      if (!line.match(/CV|CURRICULUM|RESUME|VITAE|CONTACT|EMAIL|PHONE|ADDRESS/i)) {
-        name = line;
-        console.log('✓ Found name:', name);
-        break;
-      }
+    // Look for lines with 2-4 words, allowing special chars (æ, ø, å, é, etc.)
+    // Must start with capital, 5-50 chars
+    if (line.match(/^[A-ZÆØÅÉ][a-zæøåéèê]+(\s+[A-ZÆØÅÉ][a-zæøåéèê]+){1,3}$/u) && 
+        line.length >= 5 && 
+        line.length <= 50 &&
+        !line.match(/^(CV|Curriculum|Resume|Vitae|Contact|Email|Phone|Address|Mobil|Adresse|Født|Nationalitet|Erfaring|Kontakt)$/i)) {
+      name = line;
+      console.log('✓ Found name:', name);
+      break;
     }
-  }
-  
-  // Try to find title/role (look for keywords)
-  let title = "";
-  const titleKeywords = ['Developer', 'Engineer', 'Manager', 'Designer', 'Analyst', 'Specialist', 'Consultant', 'Architect', 'Lead', 'Director', 'Chef', 'Leder', 'Specialist', 'Sikringsleder', 'CFPA'];
-  for (const line of lines.slice(0, 15)) {
-    if (titleKeywords.some(kw => line.includes(kw)) && line.length < 100) {
-      title = line;
-      console.log('✓ Found title:', title);
+    // Also check for "Name: Value" format
+    if (line.match(/^(Name|Navn|Full Name):\s*(.+)$/i)) {
+      name = line.split(':')[1].trim();
+      console.log('✓ Found name (labeled):', name);
       break;
     }
   }
   
-  // Extract skills (look for common tech terms, certifications, tools)
+  // Try to find title/role - look for common job title patterns
+  let title = "";
+  const titleKeywords = [
+    'Developer', 'Engineer', 'Manager', 'Designer', 'Analyst', 'Specialist', 'Consultant', 
+    'Architect', 'Lead', 'Director', 'Chef', 'Leder', 'Sikringsleder', 'Sikkerhedsspecialist',
+    'CFPA', 'Eksamineret', 'Coordinator', 'Administrator', 'Officer'
+  ];
+  
+  for (let i = 0; i < Math.min(20, lines.length); i++) {
+    const line = lines[i];
+    // Skip the name line
+    if (line === name) continue;
+    
+    // Look for lines containing job title keywords
+    if (titleKeywords.some(kw => line.toLowerCase().includes(kw.toLowerCase())) && 
+        line.length > 3 && 
+        line.length < 150) {
+      // Don't pick lines that look like company names or dates
+      if (!line.match(/\d{4}/) && !line.match(/A\/S|ApS|Ltd|Inc|Corp|GmbH/)) {
+        title = line;
+        console.log('✓ Found title:', title);
+        break;
+      }
+    }
+    
+    // Also check for "Title: Value" or "Current Role:" format
+    if (line.match(/^(Title|Role|Position|Current Role|Titel|Stilling):\s*(.+)$/i)) {
+      title = line.split(':').slice(1).join(':').trim();
+      console.log('✓ Found title (labeled):', title);
+      break;
+    }
+  }
+  
+  // Extract skills - look for technical terms, certifications, tools
   const skillPatterns = [
-    /\b(JavaScript|TypeScript|Python|Java|C\+\+|Ruby|PHP|Swift|Kotlin|Go|Rust)\b/gi,
-    /\b(React|Angular|Vue|Node\.?js|Django|Flask|Spring|Laravel)\b/gi,
-    /\b(AWS|Azure|GCP|Docker|Kubernetes|Jenkins|Git|Linux)\b/gi,
-    /\b(SQL|PostgreSQL|MySQL|MongoDB|Redis|Elasticsearch)\b/gi,
-    /\b(SAP|Salesforce|Oracle|Tableau|Power BI)\b/gi,
-    /\b(CFPA|ISO \d+|GDPR|Sikkerhed|Security|Safety)\b/gi,
-    /\b(Milestone|AI|Machine Learning|Data Science|DevOps)\b/gi,
+    // Programming & Tech
+    /\b(JavaScript|TypeScript|Python|Java|C\+\+|C#|Ruby|PHP|Swift|Kotlin|Go|Rust|Scala)\b/gi,
+    /\b(React|Angular|Vue|Node\.?js|Django|Flask|Spring|Laravel|Express)\b/gi,
+    /\b(AWS|Azure|GCP|Google Cloud|Docker|Kubernetes|Jenkins|Git|GitHub|GitLab|Linux|Unix)\b/gi,
+    /\b(SQL|PostgreSQL|MySQL|MongoDB|Redis|Oracle|Elasticsearch|DynamoDB)\b/gi,
+    /\b(HTML|CSS|REST|API|GraphQL|Microservices|Agile|Scrum|CI\/CD)\b/gi,
+    
+    // Business & Enterprise
+    /\b(SAP|Salesforce|Oracle|Microsoft Dynamics|Tableau|Power BI|Excel|PowerPoint)\b/gi,
+    /\b(Project Management|Team Leadership|Budgeting|Strategy|Analysis)\b/gi,
+    
+    // Security & Safety
+    /\b(CFPA|ISO\s*\d+|GDPR|Sikkerhed|Security|Safety|Risk Management|Compliance)\b/gi,
+    /\b(Physical Security|Cyber Security|Access Control|CCTV|Surveillance)\b/gi,
+    /\b(Milestone|XProtect|Genetec|Lenel|Honeywell)\b/gi,
+    
+    // General Tools
+    /\b(Jira|Confluence|Slack|Teams|Zoom|Asana|Trello|Notion)\b/gi,
+    /\b(Photoshop|Illustrator|Figma|Sketch|InDesign|AutoCAD)\b/gi,
+    
+    // Languages
+    /\b(English|Danish|Dansk|German|Tysk|French|Spanish|Norwegian|Swedish)\b/gi,
   ];
   
   const skillsSet = new Set<string>();
-  const fullText = lines.join(' ');
+  const fullText = text;
   
   for (const pattern of skillPatterns) {
     const matches = fullText.match(pattern);
     if (matches) {
-      matches.forEach(match => skillsSet.add(match));
+      matches.forEach(match => {
+        // Normalize some common variations
+        const normalized = match.trim();
+        skillsSet.add(normalized);
+      });
     }
   }
   
-  const core_skills = Array.from(skillsSet).slice(0, 15);
-  console.log('✓ Found skills:', core_skills.join(', '));
+  const core_skills = Array.from(skillsSet).slice(0, 20);
+  console.log('✓ Found', core_skills.length, 'skills:', core_skills.slice(0, 10).join(', '), '...');
   
-  // Try to find location (look for cities, countries, addresses)
+  // Try to find location
   const locations: string[] = [];
   const locationPatterns = [
-    /\b(Denmark|Danmark|Copenhagen|København|Aarhus|Odense|Aalborg|Norway|Sweden)\b/gi,
-    /\b([A-ZÆØÅ][a-zæøå]+,?\s+[A-Z]{2})\b/g, // City, STATE format
-    /\d{4}\s+[A-ZÆØÅ][a-zæøå]+/g, // Postal code format
+    /\b(Denmark|Danmark|Copenhagen|København|Aarhus|Odense|Aalborg|Lyngby)\b/gi,
+    /\b(Norway|Norge|Sweden|Sverige|Germany|Tyskland)\b/gi,
+    /\b\d{4}\s+[A-ZÆØÅ][a-zæøå]+/g, // Danish postal codes (4 digits + city)
   ];
   
   for (const pattern of locationPatterns) {
     const matches = fullText.match(pattern);
     if (matches) {
-      matches.slice(0, 3).forEach(match => {
-        if (!locations.includes(match)) {
-          locations.push(match);
+      matches.slice(0, 5).forEach(match => {
+        const clean = match.trim();
+        if (!locations.some(loc => loc.toLowerCase() === clean.toLowerCase())) {
+          locations.push(clean);
         }
       });
     }
   }
   
-  console.log('✓ Found locations:', locations.join(', '));
+  console.log('✓ Found locations:', locations.join(', ') || 'None');
   
-  // Determine seniority from text
+  // Determine seniority from context
   let seniority_level = "Mid";
-  if (fullText.match(/senior|lead|principal|staff|architect/i)) {
+  const seniorityText = fullText.toLowerCase();
+  if (seniorityText.match(/senior|lead|principal|staff|architect|chef|leder|director/)) {
     seniority_level = "Senior";
-  } else if (fullText.match(/junior|entry|graduate|intern/i)) {
+  } else if (seniorityText.match(/junior|entry|graduate|intern|trainee/)) {
     seniority_level = "Junior";
+  } else if (seniorityText.match(/\d+\+?\s*(?:years|år|year)/)) {
+    // Look for year counts
+    const yearMatch = seniorityText.match(/(\d+)\+?\s*(?:years|år)/);
+    if (yearMatch && parseInt(yearMatch[1]) >= 5) {
+      seniority_level = "Senior";
+    }
   }
   
-  // Create a basic summary
+  // Create a summary from extracted data
+  const skillsList = core_skills.slice(0, 4).join(', ') || 'various technologies';
   const summary = title 
-    ? `${title} with expertise in ${core_skills.slice(0, 3).join(', ')}. Seeking new opportunities to contribute skills and experience.`
-    : `Professional with expertise in ${core_skills.slice(0, 3).join(', ')}. Seeking new opportunities.`;
+    ? `${title}${core_skills.length > 0 ? ' with expertise in ' + skillsList : ''}. Seeking new opportunities to contribute skills and experience.`
+    : `Professional with expertise in ${skillsList}. Seeking new opportunities.`;
   
-  console.log('✓ Extracted profile for:', name);
-  
-  return {
+  const result = {
     name,
     title: title || "Professional",
     seniority_level,
@@ -354,6 +409,10 @@ function extractBasicInfoFromText(text: string) {
     locations: locations.length > 0 ? locations : ["Remote"],
     summary
   };
+  
+  console.log('✅ Extracted profile:', JSON.stringify(result, null, 2));
+  
+  return result;
 }
 
 function getMockMatches() {
