@@ -79,39 +79,60 @@ async function analyzeCV(cvText: string) {
   });
 
   console.log('🤖 Sending CV to OpenAI for parsing...');
-  console.log('📄 CV text preview (first 300 chars):', cvText.substring(0, 300));
+  console.log('📄 CV text preview (first 500 chars):', cvText.substring(0, 500));
 
   const completion = await openai.chat.completions.create({
     model: 'gpt-4',
     messages: [
       {
         role: 'system',
-        content: `You are a precision CV/resume parser. Your job is to extract EXACT information.
+        content: `You are a CV parser. Extract information from the CV text.
 
-ABSOLUTELY CRITICAL RULES:
-1. The person's NAME must be EXACTLY as written - every letter, every special character (æ, ø, å, é, ü, etc.)
-2. Do NOT translate, simplify, or anglicize names. "Alexx Martin Højgård" stays EXACTLY as "Alexx Martin Højgård"
-3. Job titles must be EXACT - "Eksamineret Sikringsleder, CFPA" NOT "Certified Security Manager"
-4. Extract ALL skills, certifications, technologies mentioned
-5. Keep Danish/foreign text exactly as written
-6. Look at the VERY BEGINNING of the CV - the name is usually in the first few lines
-7. Names often appear right after "CV" header or at the very top
+RULES:
+1. Extract the person's EXACT full name - do not modify it
+2. For Danish names with æ, ø, å - keep them exactly as written
+3. Extract their professional title (e.g., "Eksamineret Sikringsleder, CFPA")
+4. List ALL skills, tools, certifications, languages mentioned
+5. Extract education with EXACT date ranges (e.g., "2016 - 2019", not just "2019")
+6. Extract work experience with dates, companies, roles, and responsibilities
 
-Return ONLY valid JSON:
+The CV may have two columns - look carefully for:
+- Name usually appears near "CV" at the top
+- Title may be at top right or after name
+- Education section headed "Uddannelse"
+- Experience section headed "Erfaring"
+
+Return JSON:
 {
-  "name": "EXACT full name (look at top of CV, after 'CV' header if present)",
-  "title": "EXACT current/recent job title (don't translate)",
-  "seniority_level": "Junior|Mid|Senior|Lead|Executive",
-  "core_skills": ["every skill, tool, certification, technology mentioned"],
-  "locations": ["cities, countries mentioned"],
-  "summary": "2-3 sentence professional summary based on CV content"
-}
-
-NO MARKDOWN. ONLY JSON.`
+  "name": "exact full name",
+  "title": "professional title/certification", 
+  "seniority_level": "Junior|Mid|Senior|Lead",
+  "core_skills": ["all skills, tools, certifications"],
+  "locations": ["cities/countries mentioned"],
+  "summary": "2-3 sentence professional summary",
+  "experience": [
+    {
+      "company": "company name",
+      "role": "job title",
+      "location": "location",
+      "start_date": "exact start (e.g., November, 2022)",
+      "end_date": "exact end (e.g., Nuværende or date)",
+      "bullets": ["key responsibilities/achievements"]
+    }
+  ],
+  "education": [
+    {
+      "degree": "degree/certification name",
+      "institution": "school/institution",
+      "start_date": "start year",
+      "end_date": "end year"
+    }
+  ]
+}`
       },
       {
         role: 'user',
-        content: `Extract information from this CV. The name is at the TOP of the document - find it EXACTLY as written:\n\n${cvText.substring(0, 8000)}`
+        content: `Parse this CV and extract ALL information:\n\n${cvText.substring(0, 10000)}`
       }
     ],
     temperature: 0.1,
