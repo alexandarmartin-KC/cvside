@@ -210,11 +210,44 @@ function validateNoHallucination(tailoredCV: any, cvProfile: any): { valid: bool
   return { valid: issues.length === 0, issues };
 }
 
+// Parse stored JSON fields if available
+function parseStoredExperience(cvProfile: any): any[] {
+  if (cvProfile.experienceJson) {
+    try {
+      const parsed = JSON.parse(cvProfile.experienceJson);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        console.log('✓ Using stored experience data from database:', parsed.length, 'entries');
+        return parsed;
+      }
+    } catch (e) {
+      console.warn('Failed to parse experienceJson:', e);
+    }
+  }
+  return [];
+}
+
+function parseStoredEducation(cvProfile: any): any[] {
+  if (cvProfile.educationJson) {
+    try {
+      const parsed = JSON.parse(cvProfile.educationJson);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        console.log('✓ Using stored education data from database:', parsed.length, 'entries');
+        return parsed;
+      }
+    } catch (e) {
+      console.warn('Failed to parse educationJson:', e);
+    }
+  }
+  return [];
+}
+
 // Generate a safe fallback CV that uses only real data
 function generateFallbackCV(cvProfile: any, job: any): TailoredCVSection {
   console.log('📋 Generating fallback CV using profile data:', {
     name: cvProfile.name,
     hasRawText: !!cvProfile.rawCvText,
+    hasStoredExperience: !!cvProfile.experienceJson,
+    hasStoredEducation: !!cvProfile.educationJson,
     skillsCount: cvProfile.skills?.length || 0
   });
 
@@ -229,12 +262,14 @@ function generateFallbackCV(cvProfile: any, job: any): TailoredCVSection {
   const summary = cvProfile.summary || 
     `${cvProfile.seniority || 'Professional'} ${cvProfile.title || 'specialist'} with expertise in ${relevantSkills.slice(0, 3).join(', ') || 'various technologies'}. Seeking opportunities to contribute to impactful projects.`;
   
-  // Try to extract experience and education from raw CV text
-  const experience: any[] = [];
-  const education: any[] = [];
+  // First try to use stored experience/education from database
+  let experience: any[] = parseStoredExperience(cvProfile);
+  let education: any[] = parseStoredEducation(cvProfile);
   
-  if (cvProfile.rawCvText) {
-    console.log('📄 Parsing raw CV text for experience/education...');
+  // Only fall back to text parsing if no stored data available
+  
+  if (experience.length === 0 && education.length === 0 && cvProfile.rawCvText) {
+    console.log('📄 No stored experience/education - parsing raw CV text...');
     const text = cvProfile.rawCvText;
     const lines = text.split('\n').map((l: string) => l.trim()).filter((l: string) => l.length > 0);
     
@@ -402,7 +437,9 @@ function generateFallbackCV(cvProfile: any, job: any): TailoredCVSection {
       }
     }
     
-    console.log('🎓 Extracted', education.length, 'education entries');
+    console.log('🎓 Extracted', education.length, 'education entries from text');
+  } else if (experience.length > 0 || education.length > 0) {
+    console.log('✓ Using pre-parsed data - experience:', experience.length, 'education:', education.length);
   }
   
   return {
@@ -492,6 +529,10 @@ OUTPUT STRUCTURE:
 
 REMEMBER: Empty arrays are better than fabricated data. If CV has no detailed experience/education/projects, return []`;
 
+  // Parse stored experience/education for the prompt
+  const storedExperience = parseStoredExperience(cvProfile);
+  const storedEducation = parseStoredEducation(cvProfile);
+  
   // Build comprehensive user prompt with all available CV data
   let cvDataSection = `=== BASE CV DATA ===
 Name: ${cvProfile.name || 'N/A'}
@@ -501,9 +542,38 @@ Skills: ${cvProfile.skills?.join(', ') || 'N/A'}
 Professional Summary: ${cvProfile.summary || 'N/A'}
 Locations: ${cvProfile.locations?.join(', ') || 'N/A'}`;
   
-  // Include raw CV text if available for richer context
-  if (cvProfile.rawCvText) {
+  // Include structured experience data if available
+  if (storedExperience.length > 0) {
+    cvDataSection += `\n\n=== EXPERIENCE (STRUCTURED) ===`;
+    storedExperience.forEach((exp, i) => {
+      cvDataSection += `\n\n[${i + 1}] ${exp.role || 'Role'} at ${exp.company || 'Company'}`;
+      cvDataSection += `\n    Period: ${exp.start_date || '?'} - ${exp.end_date || '?'}`;
+      if (exp.location) cvDataSection += `\n    Location: ${exp.location}`;
+      if (exp.bullets && exp.bullets.length > 0) {
+        cvDataSection += `\n    Responsibilities/Achievements:`;
+        exp.bullets.forEach((b: string) => cvDataSection += `\n    • ${b}`);
+      }
+    });
+  }
+  
+  // Include structured education data if available
+  if (storedEducation.length > 0) {
+    cvDataSection += `\n\n=== EDUCATION (STRUCTURED) ===`;
+    storedEducation.forEach((edu, i) => {
+      cvDataSection += `\n\n[${i + 1}] ${edu.degree || 'Degree'}`;
+      if (edu.institution) cvDataSection += ` at ${edu.institution}`;
+      if (edu.field) cvDataSection += ` (${edu.field})`;
+      const dates = [edu.start_date, edu.end_date].filter(Boolean).join(' - ');
+      if (dates) cvDataSection += `\n    Period: ${dates}`;
+    });
+  }
+  
+  // Include raw CV text if available and no structured data exists
+  if (cvProfile.rawCvText && storedExperience.length === 0 && storedEducation.length === 0) {
     cvDataSection += `\n\n=== ORIGINAL CV TEXT ===\n${cvProfile.rawCvText.substring(0, 4000)}`; // Limit to ~4000 chars to avoid token limits
+  } else if (cvProfile.rawCvText && (storedExperience.length > 0 || storedEducation.length > 0)) {
+    // Include a shorter snippet of raw text for additional context
+    cvDataSection += `\n\n=== ADDITIONAL CV CONTEXT (EXCERPT) ===\n${cvProfile.rawCvText.substring(0, 1500)}`;
   }
   
   const userPrompt = `${cvDataSection}
