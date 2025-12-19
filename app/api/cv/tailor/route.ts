@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/auth';
+import { getSessionUser } from '@/lib/auth-session';
 import prisma from '@/lib/prisma';
 import OpenAI from 'openai';
 
@@ -305,8 +304,8 @@ Tailor the CV to emphasize relevant skills and experience for this job. Rewrite 
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -317,17 +316,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
     }
 
-    // Fetch user profile
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+    // Fetch user profile with CV
+    const userWithProfile = await prisma.user.findUnique({
+      where: { id: user.id },
       include: { cvProfile: true }
     });
 
-    if (!user) {
+    if (!userWithProfile) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    if (!user.cvProfile) {
+    if (!userWithProfile.cvProfile) {
       return NextResponse.json({ error: 'No CV profile found. Please upload a CV first.' }, { status: 400 });
     }
 
@@ -343,20 +342,20 @@ export async function POST(request: NextRequest) {
     // Generate tailored CV
     let tailoredCV;
     try {
-      tailoredCV = await generateTailoredCV(user.cvProfile, job, userNotes);
+      tailoredCV = await generateTailoredCV(userWithProfile.cvProfile, job, userNotes);
     } catch (genError) {
       console.error('Error generating tailored CV:', genError);
       // Use fallback if generation fails
       tailoredCV = {
-        name: user.cvProfile.name || user.name || 'Your Name',
-        title: user.cvProfile.title || job.title,
-        summary: user.cvProfile.summary || `Professional seeking ${job.title} position at ${job.company}.`,
-        skills: user.cvProfile.skills || [],
+        name: userWithProfile.cvProfile.name || userWithProfile.name || 'Your Name',
+        title: userWithProfile.cvProfile.title || job.title,
+        summary: userWithProfile.cvProfile.summary || `Professional seeking ${job.title} position at ${job.company}.`,
+        skills: userWithProfile.cvProfile.skills || [],
         experience: [
           {
-            title: user.cvProfile.title || 'Professional Experience',
+            title: userWithProfile.cvProfile.title || 'Professional Experience',
             company: job.company,
-            location: user.cvProfile.locations?.[0] || job.location,
+            location: userWithProfile.cvProfile.locations?.[0] || job.location,
             duration: '',
             bullets: [
               'Relevant experience in the field',
