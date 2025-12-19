@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Try to use OpenAI to parse the CV, fall back to mock if not available
+    // Try to use OpenAI to parse the CV, fall back to text extraction if not available
     let cvProfile;
     let matches;
     
@@ -209,14 +209,18 @@ export async function POST(request: NextRequest) {
         cvProfile = await analyzeCV(extractedText);
         matches = await rankJobs(cvProfile);
         console.log('Successfully parsed CV with OpenAI');
-      } catch (error) {
-        console.error('OpenAI parsing failed, using mock data:', error);
-        cvProfile = getMockProfile();
+      } catch (error: any) {
+        if (error?.status === 429 || error?.message?.includes('429')) {
+          console.warn('⚠️ OpenAI rate limit (429). Extracting basic info from CV text...');
+        } else {
+          console.error('OpenAI parsing failed, extracting basic info from text:', error);
+        }
+        cvProfile = extractBasicInfoFromText(extractedText);
         matches = getMockMatches();
       }
     } else {
-      console.warn('OPENAI_API_KEY not set, using mock data');
-      cvProfile = getMockProfile();
+      console.warn('OPENAI_API_KEY not set, extracting basic info from text');
+      cvProfile = extractBasicInfoFromText(extractedText);
       matches = getMockMatches();
     }
 
@@ -247,6 +251,108 @@ function getMockProfile() {
     core_skills: ["JavaScript", "TypeScript", "React", "Node.js", "PostgreSQL", "AWS", "Docker"],
     locations: ["San Francisco, CA", "Remote"],
     summary: "Experienced full-stack developer with 7+ years building scalable web applications. Strong expertise in modern JavaScript frameworks, cloud infrastructure, and leading development teams. Proven track record of delivering high-quality products in fast-paced startup environments."
+  };
+}
+
+// Extract basic info from CV text without AI
+function extractBasicInfoFromText(text: string) {
+  console.log('📄 Extracting basic info from CV text (length:', text.length, 'chars)');
+  
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  
+  // Try to find name (usually in first few lines, often capitalized)
+  let name = "Professional"; // Default if not found
+  for (let i = 0; i < Math.min(10, lines.length); i++) {
+    const line = lines[i];
+    // Look for lines with 2-4 capitalized words, length 5-50 chars
+    if (line.match(/^[A-ZÆØÅ][a-zæøå]+(\s+[A-ZÆØÅ][a-zæøå]+){1,3}$/) && line.length >= 5 && line.length <= 50) {
+      // Skip common headers
+      if (!line.match(/CV|CURRICULUM|RESUME|VITAE|CONTACT|EMAIL|PHONE|ADDRESS/i)) {
+        name = line;
+        console.log('✓ Found name:', name);
+        break;
+      }
+    }
+  }
+  
+  // Try to find title/role (look for keywords)
+  let title = "";
+  const titleKeywords = ['Developer', 'Engineer', 'Manager', 'Designer', 'Analyst', 'Specialist', 'Consultant', 'Architect', 'Lead', 'Director', 'Chef', 'Leder', 'Specialist', 'Sikringsleder', 'CFPA'];
+  for (const line of lines.slice(0, 15)) {
+    if (titleKeywords.some(kw => line.includes(kw)) && line.length < 100) {
+      title = line;
+      console.log('✓ Found title:', title);
+      break;
+    }
+  }
+  
+  // Extract skills (look for common tech terms, certifications, tools)
+  const skillPatterns = [
+    /\b(JavaScript|TypeScript|Python|Java|C\+\+|Ruby|PHP|Swift|Kotlin|Go|Rust)\b/gi,
+    /\b(React|Angular|Vue|Node\.?js|Django|Flask|Spring|Laravel)\b/gi,
+    /\b(AWS|Azure|GCP|Docker|Kubernetes|Jenkins|Git|Linux)\b/gi,
+    /\b(SQL|PostgreSQL|MySQL|MongoDB|Redis|Elasticsearch)\b/gi,
+    /\b(SAP|Salesforce|Oracle|Tableau|Power BI)\b/gi,
+    /\b(CFPA|ISO \d+|GDPR|Sikkerhed|Security|Safety)\b/gi,
+    /\b(Milestone|AI|Machine Learning|Data Science|DevOps)\b/gi,
+  ];
+  
+  const skillsSet = new Set<string>();
+  const fullText = lines.join(' ');
+  
+  for (const pattern of skillPatterns) {
+    const matches = fullText.match(pattern);
+    if (matches) {
+      matches.forEach(match => skillsSet.add(match));
+    }
+  }
+  
+  const core_skills = Array.from(skillsSet).slice(0, 15);
+  console.log('✓ Found skills:', core_skills.join(', '));
+  
+  // Try to find location (look for cities, countries, addresses)
+  const locations: string[] = [];
+  const locationPatterns = [
+    /\b(Denmark|Danmark|Copenhagen|København|Aarhus|Odense|Aalborg|Norway|Sweden)\b/gi,
+    /\b([A-ZÆØÅ][a-zæøå]+,?\s+[A-Z]{2})\b/g, // City, STATE format
+    /\d{4}\s+[A-ZÆØÅ][a-zæøå]+/g, // Postal code format
+  ];
+  
+  for (const pattern of locationPatterns) {
+    const matches = fullText.match(pattern);
+    if (matches) {
+      matches.slice(0, 3).forEach(match => {
+        if (!locations.includes(match)) {
+          locations.push(match);
+        }
+      });
+    }
+  }
+  
+  console.log('✓ Found locations:', locations.join(', '));
+  
+  // Determine seniority from text
+  let seniority_level = "Mid";
+  if (fullText.match(/senior|lead|principal|staff|architect/i)) {
+    seniority_level = "Senior";
+  } else if (fullText.match(/junior|entry|graduate|intern/i)) {
+    seniority_level = "Junior";
+  }
+  
+  // Create a basic summary
+  const summary = title 
+    ? `${title} with expertise in ${core_skills.slice(0, 3).join(', ')}. Seeking new opportunities to contribute skills and experience.`
+    : `Professional with expertise in ${core_skills.slice(0, 3).join(', ')}. Seeking new opportunities.`;
+  
+  console.log('✓ Extracted profile for:', name);
+  
+  return {
+    name,
+    title: title || "Professional",
+    seniority_level,
+    core_skills,
+    locations: locations.length > 0 ? locations : ["Remote"],
+    summary
   };
 }
 
