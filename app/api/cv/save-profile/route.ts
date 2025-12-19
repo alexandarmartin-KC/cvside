@@ -28,7 +28,9 @@ export async function POST(req: NextRequest) {
       cvFileName,
       cvUrl,
       workPreference,
-      rawCvText
+      rawCvText,
+      experience,
+      education
     } = body;
 
     // Validate input
@@ -40,7 +42,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Convert experience and education arrays to JSON strings for storage
+    const experienceJson = experience ? JSON.stringify(experience) : null;
+    const educationJson = education ? JSON.stringify(education) : null;
+
     console.log('Save profile - Upserting for user:', user.id);
+    console.log('Save profile - Experience entries:', experience?.length || 0);
+    console.log('Save profile - Education entries:', education?.length || 0);
 
     // Upsert CV profile with all extracted data
     const result = await prisma.cvProfile.upsert({
@@ -59,6 +67,8 @@ export async function POST(req: NextRequest) {
         cvUploadedAt: cvFileName ? new Date() : null,
         workPreference: workPreference || 'ANY',
         rawCvText: rawCvText || null,
+        experienceJson,
+        educationJson,
       },
       update: {
         name,
@@ -76,6 +86,12 @@ export async function POST(req: NextRequest) {
         }),
         ...(rawCvText !== undefined && {
           rawCvText: rawCvText || null,
+        }),
+        ...(experienceJson !== undefined && {
+          experienceJson,
+        }),
+        ...(educationJson !== undefined && {
+          educationJson,
         }),
         updatedAt: new Date(),
       },

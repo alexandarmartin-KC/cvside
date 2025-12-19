@@ -22,6 +22,21 @@ export default function UploadPage() {
       core_skills: string[];
       locations: string[];
       summary: string;
+      experience?: Array<{
+        company: string;
+        role: string;
+        location?: string;
+        start_date: string;
+        end_date: string;
+        bullets: string[];
+      }>;
+      education?: Array<{
+        degree: string;
+        institution: string;
+        field?: string;
+        start_date?: string;
+        end_date?: string;
+      }>;
     };
     matches: Array<{
       jobId: number;
@@ -299,6 +314,8 @@ export default function UploadPage() {
           cvFileName: file?.name || 'CV.pdf',
           cvUrl: dataToSave.cvDataUrl || null,
           rawCvText: dataToSave.extractedText || null,
+          experience: dataToSave.cvProfile.experience || [],
+          education: dataToSave.cvProfile.education || [],
         }),
       });
 
