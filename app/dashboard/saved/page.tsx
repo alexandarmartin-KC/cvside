@@ -100,7 +100,7 @@ export default async function SavedJobsPage() {
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Saved Jobs</h1>
         <p className="text-gray-600 mt-1">
-          {savedJobs.length} saved job{savedJobs.length !== 1 ? 's' : ''}
+          {savedJobs.length} saved job{savedJobs.length !== 1 ? 's' : ''} · Tailor your CV for each position
         </p>
       </div>
 
