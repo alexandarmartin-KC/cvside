@@ -297,7 +297,8 @@ export async function POST(request: NextRequest) {
       matches,
       jobs: SAMPLE_JOBS,
       cvDataUrl,  // Include the base64 PDF data URL
-      fileName: file.name
+      fileName: file.name,
+      extractedText: extractedText // Include raw text for storage
     });
 
   } catch (error) {

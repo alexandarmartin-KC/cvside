@@ -27,7 +27,8 @@ export async function POST(req: NextRequest) {
       preferredLocation,
       cvFileName,
       cvUrl,
-      workPreference
+      workPreference,
+      rawCvText
     } = body;
 
     // Validate input
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
         cvUrl: cvUrl || null,
         cvUploadedAt: cvFileName ? new Date() : null,
         workPreference: workPreference || 'ANY',
+        rawCvText: rawCvText || null,
       },
       update: {
         name,
@@ -71,6 +73,9 @@ export async function POST(req: NextRequest) {
           cvFileName,
           cvUrl: cvUrl || null,
           cvUploadedAt: new Date(),
+        }),
+        ...(rawCvText !== undefined && {
+          rawCvText: rawCvText || null,
         }),
         updatedAt: new Date(),
       },

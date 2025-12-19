@@ -38,6 +38,7 @@ export default function UploadPage() {
     }>;
     cvDataUrl?: string;
     fileName?: string;
+    extractedText?: string;
   } | null>(null);
 
   // Draft state (user is editing)
@@ -297,6 +298,7 @@ export default function UploadPage() {
           workPreference: 'ANY',
           cvFileName: file?.name || 'CV.pdf',
           cvUrl: dataToSave.cvDataUrl || null,
+          rawCvText: dataToSave.extractedText || null,
         }),
       });
 

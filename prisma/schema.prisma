@@ -97,6 +97,7 @@ model CvProfile {
   cvFileName     String?
   cvUploadedAt   DateTime?
   cvUrl          String?   @db.Text
+  rawCvText      String?   @db.Text // Original CV text for richer AI tailoring
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

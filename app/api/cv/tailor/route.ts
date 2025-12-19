@@ -181,6 +181,63 @@ const DESIGNER_PANEL_UI: DesignerPanelUI = {
   ]
 };
 
+// Validation helper to check if CV content stays truthful
+function validateNoHallucination(tailoredCV: any, cvProfile: any): { valid: boolean; issues: string[] } {
+  const issues: string[] = [];
+  
+  // Check if name matches (allow minor formatting differences)
+  if (tailoredCV.name && cvProfile.name) {
+    const normalizedTailored = tailoredCV.name.toLowerCase().replace(/[^a-z]/g, '');
+    const normalizedOriginal = cvProfile.name.toLowerCase().replace(/[^a-z]/g, '');
+    if (!normalizedTailored.includes(normalizedOriginal) && !normalizedOriginal.includes(normalizedTailored)) {
+      issues.push(`Name mismatch: generated "${tailoredCV.name}" vs original "${cvProfile.name}"`);
+    }
+  }
+  
+  // Check if all primary skills exist in original skills
+  if (tailoredCV.skills?.primary && cvProfile.skills) {
+    const originalSkillsLower = cvProfile.skills.map((s: string) => s.toLowerCase());
+    const invalidSkills = tailoredCV.skills.primary.filter(
+      (skill: string) => !originalSkillsLower.some((orig: string) => 
+        orig.includes(skill.toLowerCase()) || skill.toLowerCase().includes(orig)
+      )
+    );
+    if (invalidSkills.length > 0) {
+      issues.push(`Skills not in original CV: ${invalidSkills.join(', ')}`);
+    }
+  }
+  
+  return { valid: issues.length === 0, issues };
+}
+
+// Generate a safe fallback CV that uses only real data
+function generateFallbackCV(cvProfile: any, job: any): TailoredCVSection {
+  // Build summary by combining existing summary with job-relevant skills
+  const relevantSkills = cvProfile.skills?.filter((skill: string) => 
+    job.skills?.some((jobSkill: string) => 
+      skill.toLowerCase().includes(jobSkill.toLowerCase()) || 
+      jobSkill.toLowerCase().includes(skill.toLowerCase())
+    )
+  ) || [];
+  
+  const summary = cvProfile.summary || 
+    `${cvProfile.seniority || 'Professional'} ${cvProfile.title || 'specialist'} with expertise in ${relevantSkills.slice(0, 3).join(', ') || 'various technologies'}. Seeking opportunities to contribute to impactful projects.`;
+  
+  return {
+    name: cvProfile.name || '',
+    title: cvProfile.title || '',
+    summary: summary,
+    skills: {
+      primary: relevantSkills.slice(0, 6),
+      secondary: cvProfile.skills?.filter((s: string) => !relevantSkills.includes(s)).slice(0, 8) || []
+    },
+    experience: [],
+    education: [],
+    certifications: [],
+    projects: []
+  };
+}
+
 async function generateTailoredCV(
   cvProfile: any,
   job: any,
@@ -189,33 +246,7 @@ async function generateTailoredCV(
   // Check if OpenAI API key is available
   if (!process.env.OPENAI_API_KEY) {
     console.warn('OPENAI_API_KEY not set, using fallback CV generation');
-    // Return fallback immediately
-    return {
-      name: cvProfile.name || 'Your Name',
-      title: cvProfile.title || job.title,
-      summary: cvProfile.summary || `Professional with experience in ${job.skills?.slice(0, 3).join(', ')}. Seeking ${job.title} position at ${job.company}.`,
-      skills: {
-        primary: cvProfile.skills?.slice(0, 6) || [],
-        secondary: cvProfile.skills?.slice(6) || []
-      },
-      experience: [
-        {
-          company: job.company,
-          role: cvProfile.title || job.title,
-          location: cvProfile.locations?.[0] || job.location,
-          start_date: '2020',
-          end_date: 'Present',
-          bullets: [
-            'Experience with relevant technologies and methodologies',
-            'Proven track record of delivering quality results',
-            'Strong collaboration and communication skills'
-          ]
-        }
-      ],
-      education: [],
-      certifications: [],
-      projects: []
-    };
+    return generateFallbackCV(cvProfile, job);
   }
 
   const openai = new OpenAI({
@@ -224,70 +255,93 @@ async function generateTailoredCV(
 
   const systemPrompt = `You are an expert CV tailoring engine for a CV-first job platform.
 
-CRITICAL RULES:
-1. NEVER invent employment history, skills, dates, or qualifications
-2. ONLY use information present in the base CV
-3. You MAY: reorder content, rewrite bullets for impact, emphasize relevant experience
-4. Return ONLY valid JSON - no explanatory text outside the JSON
-5. All text fields must be plain text (no HTML/Markdown)
-6. Keep all content 100% truthful to the user's real experience
+CRITICAL RULES - ZERO TOLERANCE FOR VIOLATIONS:
+1. NEVER invent employment history, skills, dates, companies, job titles, or qualifications
+2. ONLY use information explicitly present in the base CV or raw CV text
+3. If the CV lacks experience/education/projects sections, return EMPTY ARRAYS - do NOT fabricate
+4. You MAY: reorder content, rewrite bullets for clarity/impact, emphasize relevant experience, prioritize skills
+5. You MAY: shorten or remove irrelevant content to focus on job-relevant achievements
+6. Return ONLY valid JSON - no explanatory text outside the JSON structure
+7. All text fields must be plain text (no HTML, no Markdown, no special formatting)
+8. Keep all content 100% truthful and verifiable from the source CV
+9. Preserve exact company names, dates, and titles unless user explicitly provides corrections
+10. If you cannot extract detailed experience, focus on skills and summary only
 
 OUTPUT STRUCTURE:
 {
-  "name": "string",
-  "title": "string (job-aligned title if truthful)",
-  "summary": "string (3-6 lines, mention relevant skills/experience)",
+  "name": "string (exact name from CV)",
+  "title": "string (current/recent title from CV, optionally refined for target role)",
+  "summary": "string (2-4 sentences highlighting relevant experience and skills for THIS job)",
   "skills": {
-    "primary": ["most relevant skills first"],
-    "secondary": ["other skills"]
+    "primary": ["top 6-8 skills most relevant to job posting"],
+    "secondary": ["other skills from CV, less central to job"]
   },
   "experience": [
     {
-      "company": "string",
-      "role": "string",
+      "company": "string (exact company name)",
+      "role": "string (exact role title)",
       "location": "string or null",
-      "start_date": "string (keep original format)",
-      "end_date": "string (keep original format, e.g. 'Present')",
-      "bullets": ["impact-focused bullets with strong verbs"]
+      "start_date": "string (exact format from CV)",
+      "end_date": "string (exact format, e.g. 'Present', '2023', 'Dec 2023')",
+      "bullets": ["rewritten achievement/responsibility bullets emphasizing impact and relevance"]
     }
   ],
   "education": [
     {
-      "institution": "string",
-      "degree": "string",
-      "field": "string or null",
+      "institution": "string (exact school name)",
+      "degree": "string (e.g., 'Bachelor of Science', 'MBA')",
+      "field": "string or null (major/field of study)",
       "start_date": "string or null",
       "end_date": "string or null"
     }
   ],
-  "certifications": ["string array or empty"],
+  "certifications": ["exact certification names from CV"],
   "projects": [
     {
-      "name": "string",
-      "description": "string",
-      "technologies": ["string array"]
+      "name": "string (project name from CV)",
+      "description": "string (rewritten for clarity and relevance)",
+      "technologies": ["tech stack from CV"]
     }
   ]
-}`;
+}
 
-  const userPrompt = `Base CV Data:
+REMEMBER: Empty arrays are better than fabricated data. If CV has no detailed experience/education/projects, return []`;
+
+  // Build comprehensive user prompt with all available CV data
+  let cvDataSection = `=== BASE CV DATA ===
 Name: ${cvProfile.name || 'N/A'}
 Current Title: ${cvProfile.title || 'N/A'}
-Seniority: ${cvProfile.seniority || 'N/A'}
+Seniority Level: ${cvProfile.seniority || 'N/A'}
 Skills: ${cvProfile.skills?.join(', ') || 'N/A'}
-Summary: ${cvProfile.summary || 'N/A'}
-Locations: ${cvProfile.locations?.join(', ') || 'N/A'}
+Professional Summary: ${cvProfile.summary || 'N/A'}
+Locations: ${cvProfile.locations?.join(', ') || 'N/A'}`;
+  
+  // Include raw CV text if available for richer context
+  if (cvProfile.rawCvText) {
+    cvDataSection += `\n\n=== ORIGINAL CV TEXT ===\n${cvProfile.rawCvText.substring(0, 4000)}`; // Limit to ~4000 chars to avoid token limits
+  }
+  
+  const userPrompt = `${cvDataSection}
 
-Target Job:
-Title: ${job.title}
+=== TARGET JOB ===
+Job Title: ${job.title}
 Company: ${job.company}
 Location: ${job.location}
-Required Skills: ${job.skills?.join(', ') || 'N/A'}
-Description: ${job.description}
+Required Skills: ${job.skills?.join(', ') || 'Not specified'}
+Job Description:
+${job.description}
 
-${userNotes ? `User Notes: ${userNotes}` : ''}
+${userNotes ? `=== USER TAILORING NOTES ===\n${userNotes}\n\n` : ''}
+=== TASK ===
+Tailor this CV for the target job:
+1. Prioritize skills that match job requirements
+2. Rewrite summary to emphasize relevant experience for THIS specific role
+3. If experience details available, highlight achievements relevant to job description
+4. Remove or de-emphasize content not relevant to this position
+5. Use strong action verbs and quantifiable achievements
+6. Maintain 100% truthfulness - do NOT add anything not in the source CV
 
-Tailor this CV for the target job. Reorder and rewrite content to emphasize relevance. Use impact-focused language. Stay 100% truthful.`;
+Output the tailored CV in the exact JSON structure specified.`;
 
   try {
     const completion = await openai.chat.completions.create({
@@ -301,33 +355,20 @@ Tailor this CV for the target job. Reorder and rewrite content to emphasize rele
     });
 
     const tailoredCV = JSON.parse(completion.choices[0].message.content || '{}');
+    
+    // Validate that no hallucination occurred
+    const validation = validateNoHallucination(tailoredCV, cvProfile);
+    if (!validation.valid) {
+      console.warn('CV tailoring validation failed:', validation.issues);
+      // Log issues but still return the CV - in production, you might want stricter handling
+      console.warn('Proceeding with generated CV despite validation warnings');
+    }
+    
     return tailoredCV;
   } catch (error) {
     console.error('OpenAI API error:', error);
-    
-    // Fallback: Return basic tailored structure
-    return {
-      name: cvProfile.name || 'Your Name',
-      title: cvProfile.title || job.title,
-      summary: cvProfile.summary || `Professional with experience in ${job.skills?.slice(0, 3).join(', ')}. Seeking ${job.title} position at ${job.company}.`,
-      skills: {
-        primary: cvProfile.skills?.slice(0, 6) || [],
-        secondary: cvProfile.skills?.slice(6) || []
-      },
-      experience: [
-        {
-          company: job.company,
-          role: cvProfile.title || job.title,
-          location: cvProfile.locations?.[0] || job.location,
-          start_date: '2020',
-          end_date: 'Present',
-          bullets: ['Key achievement or responsibility']
-        }
-      ],
-      education: cvProfile.education || [],
-      certifications: [],
-      projects: []
-    };
+    // Use safe fallback that doesn't invent data
+    return generateFallbackCV(cvProfile, job);
   }
 }
 
@@ -368,40 +409,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
-    // Generate tailored CV
-    let tailoredCV;
-    try {
-      tailoredCV = await generateTailoredCV(userWithProfile.cvProfile, job, userNotes);
-    } catch (genError) {
-      console.error('Error generating tailored CV:', genError);
-      // Use fallback if generation fails
-      tailoredCV = {
-        name: userWithProfile.cvProfile.name || userWithProfile.name || 'Your Name',
-        title: userWithProfile.cvProfile.title || job.title,
-        summary: userWithProfile.cvProfile.summary || `Professional seeking ${job.title} position at ${job.company}.`,
-        skills: {
-          primary: userWithProfile.cvProfile.skills?.slice(0, 6) || [],
-          secondary: userWithProfile.cvProfile.skills?.slice(6) || []
-        },
-        experience: [
-          {
-            company: job.company,
-            role: userWithProfile.cvProfile.title || job.title,
-            location: userWithProfile.cvProfile.locations?.[0] || job.location,
-            start_date: '2020',
-            end_date: 'Present',
-            bullets: [
-              'Relevant experience in the field',
-              'Strong technical and professional skills',
-              'Proven track record of success'
-            ]
-          }
-        ],
-        education: [],
-        certifications: [],
-        projects: []
-      };
-    }
+    // Generate tailored CV (has internal error handling with safe fallback)
+    const tailoredCV = await generateTailoredCV(userWithProfile.cvProfile, job, userNotes);
 
     // Construct response
     const response: TailoredCVResponse = {
