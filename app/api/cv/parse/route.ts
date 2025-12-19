@@ -274,47 +274,76 @@ function getMockProfile() {
 // Extract basic info from CV text without AI
 function extractBasicInfoFromText(text: string) {
   console.log('📄 Extracting basic info from CV text (length:', text.length, 'chars)');
-  console.log('📄 First 500 chars of CV text:', text.substring(0, 500));
+  console.log('📄 First 800 chars of CV text:', text.substring(0, 800));
   
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  console.log('📄 First 10 lines:', lines.slice(0, 10));
+  console.log('📄 First 15 lines:', lines.slice(0, 15));
   
-  // Try to find name - look more carefully in first 15 lines
+  // Words that indicate this is NOT a name (job titles, descriptions, headers)
+  const notNameIndicators = [
+    'ansvarlig', 'koordinering', 'supervision', 'design', 'implementering',
+    'procedurer', 'opdatering', 'gennemgang', 'resultater', 'arbejdsopgaver',
+    'erfaring', 'uddannelse', 'kontakt', 'summary', 'profile', 'experience',
+    'education', 'skills', 'certifications', 'projects', 'references',
+    'for ', 'og ', 'med ', 'til ', 'fra ', 'som ', 'hvor ', 'samt ',
+    'manager', 'developer', 'engineer', 'specialist', 'consultant', 'lead',
+    'sikkerhed', 'hovedkontor', 'leverandør', 'monitoring', 'control'
+  ];
+  
+  // Try to find name
   let name = "";
   
-  // Strategy 1: Look for a line that looks like a name (2-4 words, proper case)
-  for (let i = 0; i < Math.min(20, lines.length); i++) {
+  // Strategy 1: Look for lines that look like personal names
+  // A name typically: 2-4 words, each capitalized, no job-related words, relatively short
+  for (let i = 0; i < Math.min(25, lines.length); i++) {
     const line = lines[i];
+    const lineLower = line.toLowerCase();
     
-    // Skip common headers and labels
-    if (line.match(/^(CV|Curriculum|Resume|Vitae|Contact|Email|Phone|Address|Mobil|Adresse|Født|Nationalitet|Erfaring|Kontakt|Summary|Experience|Education|Skills|Profile)$/i)) {
+    // Skip if contains indicators that this is NOT a name
+    if (notNameIndicators.some(indicator => lineLower.includes(indicator))) {
       continue;
     }
     
-    // Skip lines with dates, emails, phone numbers
-    if (line.match(/@|phone|mobil|tlf|\d{4,}|http|www\./i)) {
+    // Skip common headers
+    if (line.match(/^(CV|Curriculum|Resume|Vitae|Contact|Email|Phone|Mobil|Adresse|Født|Nationalitet|Erfaring|Kontakt)$/i)) {
       continue;
     }
     
-    // Skip single words unless it's clearly a name
+    // Skip lines with dates, emails, phone numbers, URLs
+    if (line.match(/@|phone|mobil|tlf|\d{4,}|http|www\.|:|\.|,/i)) {
+      continue;
+    }
+    
+    // Skip lines that are too long (names are usually short)
+    if (line.length > 40) continue;
+    
+    // Split into words
     const words = line.split(/\s+/);
-    if (words.length < 2 || words.length > 5) continue;
     
-    // Check if line looks like a person's name (each word starts with capital)
-    const looksLikeName = words.every(word => 
-      word.match(/^[A-ZÆØÅÉÈÊËÄÖÜÁÍÓÚ][a-zæøåéèêëäöüáíóúxx]*$/i) && word.length >= 2
-    );
+    // Names typically have 2-4 words
+    if (words.length < 2 || words.length > 4) continue;
     
-    if (looksLikeName && line.length >= 5 && line.length <= 60) {
+    // Each word should be capitalized and reasonably short (names are typically 2-12 chars)
+    const looksLikeName = words.every(word => {
+      // Must start with capital letter
+      if (!word.match(/^[A-ZÆØÅÉÈÊËÄÖÜÁÍÓÚ]/)) return false;
+      // Must be reasonable length for a name
+      if (word.length < 2 || word.length > 15) return false;
+      // Should not contain numbers
+      if (word.match(/\d/)) return false;
+      return true;
+    });
+    
+    if (looksLikeName) {
       name = line;
       console.log('✓ Found name (pattern match):', name);
       break;
     }
   }
   
-  // Strategy 2: Look for "Name: Value" or "Navn: Value" format
+  // Strategy 2: Look for labeled name
   if (!name) {
-    for (const line of lines.slice(0, 15)) {
+    for (const line of lines.slice(0, 20)) {
       const match = line.match(/^(Name|Navn|Full Name|Fulde Navn)[\s:]+(.+)$/i);
       if (match) {
         name = match[2].trim();
@@ -324,29 +353,35 @@ function extractBasicInfoFromText(text: string) {
     }
   }
   
-  // Strategy 3: If CV starts with "CV" header, name is likely the next substantial line
+  // Strategy 3: If we find "CV" at the start, the name is likely soon after
   if (!name) {
     for (let i = 0; i < Math.min(5, lines.length); i++) {
       if (lines[i].match(/^CV$/i)) {
-        // Look at next few lines
-        for (let j = i + 1; j < i + 4 && j < lines.length; j++) {
-          const nextLine = lines[j];
-          // Skip labels like "Født:", "Nationalitet:"
-          if (nextLine.includes(':')) continue;
-          if (nextLine.length >= 5 && nextLine.length <= 60 && !nextLine.match(/^\d/)) {
-            name = nextLine;
-            console.log('✓ Found name (after CV header):', name);
-            break;
-          }
+        for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+          const candidate = lines[j];
+          const candidateLower = candidate.toLowerCase();
+          
+          // Skip if contains job-related words
+          if (notNameIndicators.some(ind => candidateLower.includes(ind))) continue;
+          // Skip labels
+          if (candidate.includes(':')) continue;
+          // Skip long lines
+          if (candidate.length > 35) continue;
+          // Skip single words
+          if (candidate.split(/\s+/).length < 2) continue;
+          
+          name = candidate;
+          console.log('✓ Found name (after CV header):', name);
+          break;
         }
-        break;
+        if (name) break;
       }
     }
   }
   
   if (!name) {
     name = "Unknown";
-    console.log('⚠️ Could not find name, using "Unknown"');
+    console.log('⚠️ Could not find name in CV text');
   }
   
   // Try to find title/role - look for common job title patterns
