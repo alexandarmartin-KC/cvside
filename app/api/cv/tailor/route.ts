@@ -212,6 +212,12 @@ function validateNoHallucination(tailoredCV: any, cvProfile: any): { valid: bool
 
 // Generate a safe fallback CV that uses only real data
 function generateFallbackCV(cvProfile: any, job: any): TailoredCVSection {
+  console.log('📋 Generating fallback CV using profile data:', {
+    name: cvProfile.name,
+    hasRawText: !!cvProfile.rawCvText,
+    skillsCount: cvProfile.skills?.length || 0
+  });
+
   // Build summary by combining existing summary with job-relevant skills
   const relevantSkills = cvProfile.skills?.filter((skill: string) => 
     job.skills?.some((jobSkill: string) => 
@@ -223,15 +229,64 @@ function generateFallbackCV(cvProfile: any, job: any): TailoredCVSection {
   const summary = cvProfile.summary || 
     `${cvProfile.seniority || 'Professional'} ${cvProfile.title || 'specialist'} with expertise in ${relevantSkills.slice(0, 3).join(', ') || 'various technologies'}. Seeking opportunities to contribute to impactful projects.`;
   
+  // Try to extract basic experience from raw CV text if available
+  const experience = [];
+  if (cvProfile.rawCvText) {
+    // Look for date patterns and company/role information
+    const textLines = cvProfile.rawCvText.split('\n');
+    let currentJob: any = null;
+    
+    for (const line of textLines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      
+      // Look for date ranges (e.g., "November, 2022 - Nuværende", "2020 - 2023")
+      const dateMatch = trimmed.match(/(\d{4}|[A-Z][a-z]+,?\s+\d{4})\s*[-–—]\s*(Nuværende|Present|\d{4}|[A-Z][a-z]+,?\s+\d{4})/i);
+      
+      if (dateMatch) {
+        if (currentJob) {
+          experience.push(currentJob);
+        }
+        currentJob = {
+          company: '',
+          role: '',
+          start_date: dateMatch[1],
+          end_date: dateMatch[2],
+          bullets: []
+        };
+      } else if (currentJob) {
+        // Try to detect company/role
+        if (!currentJob.company && trimmed.length < 100 && trimmed.length > 5) {
+          if (trimmed.includes('A/S') || trimmed.includes('Danmark') || trimmed.match(/^[A-Z]/)) {
+            currentJob.company = trimmed;
+          }
+        }
+        if (!currentJob.role && trimmed.length < 100 && trimmed.length > 5) {
+          if (trimmed.match(/^[A-ZÆØÅ][a-zæøå]+(\s+[A-ZÆØÅ][a-zæøå]+)+/)) {
+            currentJob.role = trimmed;
+          }
+        }
+        // Add description bullets
+        if (currentJob.company && currentJob.role && trimmed.length > 20) {
+          currentJob.bullets.push(trimmed);
+        }
+      }
+    }
+    
+    if (currentJob && currentJob.company) {
+      experience.push(currentJob);
+    }
+  }
+  
   return {
     name: cvProfile.name || '',
     title: cvProfile.title || '',
     summary: summary,
     skills: {
-      primary: relevantSkills.slice(0, 6),
-      secondary: cvProfile.skills?.filter((s: string) => !relevantSkills.includes(s)).slice(0, 8) || []
+      primary: relevantSkills.slice(0, 8),
+      secondary: cvProfile.skills?.filter((s: string) => !relevantSkills.includes(s)).slice(0, 12) || []
     },
-    experience: [],
+    experience: experience.slice(0, 3), // Include up to 3 jobs
     education: [],
     certifications: [],
     projects: []
@@ -368,9 +423,16 @@ Output the tailored CV in the exact JSON structure specified.`;
     }
     
     return tailoredCV;
-  } catch (error) {
-    console.error('OpenAI API error:', error);
-    // Use safe fallback that doesn't invent data
+  } catch (error: any) {
+    // Check if it's a rate limit error
+    if (error?.status === 429 || error?.message?.includes('429')) {
+      console.error('⚠️ OpenAI rate limit exceeded (429). Using fallback with your real CV data.');
+      console.error('Tip: Wait a few minutes or upgrade your OpenAI plan for higher limits.');
+    } else {
+      console.error('OpenAI API error:', error);
+    }
+    
+    // Use safe fallback that uses your real CV data (no invention)
     return generateFallbackCV(cvProfile, job);
   }
 }
@@ -407,8 +469,8 @@ export async function POST(request: NextRequest) {
     console.log('CV Profile data:', {
       name: userWithProfile.cvProfile.name,
       title: userWithProfile.cvProfile.title,
-      hasRawCvText: !!userWithProfile.cvProfile.rawCvText,
-      rawCvTextLength: userWithProfile.cvProfile.rawCvText?.length || 0,
+      hasRawCvText: !!(userWithProfile.cvProfile as any).rawCvText,
+      rawCvTextLength: (userWithProfile.cvProfile as any).rawCvText?.length || 0,
       skillsCount: userWithProfile.cvProfile.skills?.length || 0
     });
 
@@ -424,12 +486,18 @@ export async function POST(request: NextRequest) {
     // Generate tailored CV (has internal error handling with safe fallback)
     const tailoredCV = await generateTailoredCV(userWithProfile.cvProfile, job, userNotes);
 
+    // Check if we used fallback (experience array will be populated from rawCvText if available)
+    const usedFallback = !process.env.OPENAI_API_KEY;
+    const instructions = usedFallback 
+      ? '⚠️ Note: Using fallback mode (OpenAI API unavailable or rate limited). CV uses your real data but may lack AI optimization. All sections are editable - click any field to modify text. Use the design panel to customize appearance.'
+      : 'All sections are editable. Click any field to modify text. Use the design panel to customize your CV appearance. Changes are saved automatically. Export to PDF or DOCX when ready to apply.';
+
     // Construct response
     const response: TailoredCVResponse = {
       tailored_cv: tailoredCV,
       design_options: DESIGN_OPTIONS,
       designer_panel_ui: DESIGNER_PANEL_UI,
-      instructions_for_user_editing: 'All sections are editable. Click any field to modify text. Use the design panel to customize your CV appearance. Changes are saved automatically. Export to PDF or DOCX when ready to apply.'
+      instructions_for_user_editing: instructions
     };
 
     return NextResponse.json(response);
