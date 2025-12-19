@@ -229,53 +229,180 @@ function generateFallbackCV(cvProfile: any, job: any): TailoredCVSection {
   const summary = cvProfile.summary || 
     `${cvProfile.seniority || 'Professional'} ${cvProfile.title || 'specialist'} with expertise in ${relevantSkills.slice(0, 3).join(', ') || 'various technologies'}. Seeking opportunities to contribute to impactful projects.`;
   
-  // Try to extract basic experience from raw CV text if available
-  const experience = [];
+  // Try to extract experience and education from raw CV text
+  const experience: any[] = [];
+  const education: any[] = [];
+  
   if (cvProfile.rawCvText) {
-    // Look for date patterns and company/role information
-    const textLines = cvProfile.rawCvText.split('\n');
+    console.log('📄 Parsing raw CV text for experience/education...');
+    const text = cvProfile.rawCvText;
+    const lines = text.split('\n').map((l: string) => l.trim()).filter((l: string) => l.length > 0);
+    
+    // --- EXPERIENCE EXTRACTION ---
+    // Look for patterns like "November, 2022 - Nuværende" or "2020 - 2023"
+    let inExperienceSection = false;
     let currentJob: any = null;
     
-    for (const line of textLines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const lineLower = line.toLowerCase();
       
-      // Look for date ranges (e.g., "November, 2022 - Nuværende", "2020 - 2023")
-      const dateMatch = trimmed.match(/(\d{4}|[A-Z][a-z]+,?\s+\d{4})\s*[-–—]\s*(Nuværende|Present|\d{4}|[A-Z][a-z]+,?\s+\d{4})/i);
+      // Detect experience section
+      if (lineLower.match(/^(erfaring|experience|work experience|employment)/)) {
+        inExperienceSection = true;
+        continue;
+      }
+      
+      // Detect we've moved to another section
+      if (lineLower.match(/^(uddannelse|education|skills|certifications|references)/)) {
+        if (currentJob && currentJob.company) {
+          experience.push(currentJob);
+          currentJob = null;
+        }
+        inExperienceSection = false;
+      }
+      
+      // Look for date ranges anywhere
+      const dateMatch = line.match(/([A-Za-z]+,?\s+\d{4}|\d{4})\s*[-–—]\s*(Nuværende|Present|Nu|\d{4}|[A-Za-z]+,?\s+\d{4})/i);
       
       if (dateMatch) {
-        if (currentJob) {
+        // Save previous job
+        if (currentJob && currentJob.company) {
           experience.push(currentJob);
         }
+        
         currentJob = {
           company: '',
           role: '',
+          location: '',
           start_date: dateMatch[1],
           end_date: dateMatch[2],
           bullets: []
         };
-      } else if (currentJob) {
-        // Try to detect company/role
-        if (!currentJob.company && trimmed.length < 100 && trimmed.length > 5) {
-          if (trimmed.includes('A/S') || trimmed.includes('Danmark') || trimmed.match(/^[A-Z]/)) {
-            currentJob.company = trimmed;
+        
+        // Look at surrounding lines for company/role
+        // Check previous line for company
+        if (i > 0) {
+          const prevLine = lines[i - 1];
+          if (prevLine.match(/A\/S|ApS|Inc|Ltd|GmbH|Corp/i) || 
+              (prevLine.length < 60 && prevLine.match(/^[A-ZÆØÅ]/))) {
+            currentJob.company = prevLine;
           }
         }
-        if (!currentJob.role && trimmed.length < 100 && trimmed.length > 5) {
-          if (trimmed.match(/^[A-ZÆØÅ][a-zæøå]+(\s+[A-ZÆØÅ][a-zæøå]+)+/)) {
-            currentJob.role = trimmed;
+        
+        // Check next lines for role and bullets
+        for (let j = i + 1; j < Math.min(i + 15, lines.length); j++) {
+          const nextLine = lines[j];
+          
+          // Stop if we hit another date or section header
+          if (nextLine.match(/\d{4}\s*[-–—]/) || 
+              nextLine.toLowerCase().match(/^(erfaring|uddannelse|education|skills)/)) {
+            break;
           }
-        }
-        // Add description bullets
-        if (currentJob.company && currentJob.role && trimmed.length > 20) {
-          currentJob.bullets.push(trimmed);
+          
+          // Role detection (title-like text)
+          if (!currentJob.role && nextLine.length < 80) {
+            if (nextLine.match(/specialist|leder|manager|developer|engineer|consultant|sikkerhed|fysisk/i)) {
+              currentJob.role = nextLine;
+              continue;
+            }
+          }
+          
+          // Company detection
+          if (!currentJob.company && nextLine.match(/A\/S|ApS|Inc|Ltd|Danmark|Denmark/i)) {
+            currentJob.company = nextLine.replace(/\s*\|\s*/g, ', ');
+            continue;
+          }
+          
+          // Location detection  
+          if (!currentJob.location && nextLine.match(/Danmark|Denmark|Copenhagen|København/i)) {
+            currentJob.location = nextLine;
+            continue;
+          }
+          
+          // Bullet points (longer descriptive text)
+          if (nextLine.length > 30 && !nextLine.match(/^[A-ZÆØÅ][a-zæøå]+$/)) {
+            currentJob.bullets.push(nextLine);
+          }
         }
       }
     }
     
+    // Don't forget the last job
     if (currentJob && currentJob.company) {
       experience.push(currentJob);
     }
+    
+    console.log('📋 Extracted', experience.length, 'experience entries');
+    
+    // --- EDUCATION EXTRACTION ---
+    let inEducationSection = false;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const lineLower = line.toLowerCase();
+      
+      // Detect education section
+      if (lineLower.match(/^(uddannelse|education)/)) {
+        inEducationSection = true;
+        continue;
+      }
+      
+      // Stop at next section
+      if (inEducationSection && lineLower.match(/^(erfaring|experience|skills|certifications|references|kontakt)/)) {
+        inEducationSection = false;
+      }
+      
+      if (inEducationSection || lineLower.includes('eksamineret') || lineLower.includes('akademi')) {
+        // Look for education entries - year patterns
+        const yearMatch = line.match(/\b(19\d{2}|20\d{2})\b/);
+        
+        if (yearMatch || line.match(/eksamineret|akademi|bachelor|master|kandidat|hf|hhx|htx|stx/i)) {
+          // Try to extract institution and degree from surrounding lines
+          let degree = '';
+          let institution = '';
+          let endDate = yearMatch ? yearMatch[1] : '';
+          
+          // Check if this line has the degree
+          if (line.match(/eksamineret|sikringsleder|akademi|bachelor|master|kommunikation/i)) {
+            degree = line.replace(/\b\d{4}\b/g, '').trim();
+          }
+          
+          // Look at nearby lines for institution
+          for (let j = Math.max(0, i - 2); j <= Math.min(lines.length - 1, i + 2); j++) {
+            const nearby = lines[j];
+            if (nearby.match(/^(DBI|CFPA|Roskilde|København|Handelsskole|Universitet|University)/i)) {
+              institution = nearby;
+            }
+            if (!degree && nearby.match(/eksamineret|akademi|bachelor|master|hhx|htx|kommunikation/i)) {
+              degree = nearby;
+            }
+            if (!endDate) {
+              const ym = nearby.match(/\b(19\d{2}|20\d{2})\b/);
+              if (ym) endDate = ym[1];
+            }
+          }
+          
+          // Only add if we have meaningful data and haven't added this already
+          if ((degree || institution) && endDate) {
+            const exists = education.some(e => 
+              e.degree === degree && e.institution === institution && e.end_date === endDate
+            );
+            if (!exists) {
+              education.push({
+                degree: degree || 'Degree',
+                institution: institution || '',
+                field: '',
+                start_date: '',
+                end_date: endDate
+              });
+            }
+          }
+        }
+      }
+    }
+    
+    console.log('🎓 Extracted', education.length, 'education entries');
   }
   
   return {
@@ -286,8 +413,8 @@ function generateFallbackCV(cvProfile: any, job: any): TailoredCVSection {
       primary: relevantSkills.slice(0, 8),
       secondary: cvProfile.skills?.filter((s: string) => !relevantSkills.includes(s)).slice(0, 12) || []
     },
-    experience: experience.slice(0, 3), // Include up to 3 jobs
-    education: [],
+    experience: experience.slice(0, 5),
+    education: education.slice(0, 5),
     certifications: [],
     projects: []
   };
