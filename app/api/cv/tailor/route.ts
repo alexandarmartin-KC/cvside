@@ -245,10 +245,13 @@ async function generateTailoredCV(
 ): Promise<TailoredCVSection> {
   // Check if OpenAI API key is available
   if (!process.env.OPENAI_API_KEY) {
-    console.warn('OPENAI_API_KEY not set, using fallback CV generation');
+    console.warn('⚠️ OPENAI_API_KEY not set - using fallback CV generation (no AI)');
+    console.warn('Set OPENAI_API_KEY environment variable to enable real CV parsing');
     return generateFallbackCV(cvProfile, job);
   }
 
+  console.log('✓ Using OpenAI to tailor CV');
+  
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
@@ -399,6 +402,15 @@ export async function POST(request: NextRequest) {
     if (!userWithProfile.cvProfile) {
       return NextResponse.json({ error: 'No CV profile found. Please upload a CV first.' }, { status: 400 });
     }
+
+    // Log what CV data we're working with
+    console.log('CV Profile data:', {
+      name: userWithProfile.cvProfile.name,
+      title: userWithProfile.cvProfile.title,
+      hasRawCvText: !!userWithProfile.cvProfile.rawCvText,
+      rawCvTextLength: userWithProfile.cvProfile.rawCvText?.length || 0,
+      skillsCount: userWithProfile.cvProfile.skills?.length || 0
+    });
 
     // Fetch job details
     const job = await prisma.job.findUnique({
