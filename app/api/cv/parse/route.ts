@@ -199,18 +199,59 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mock CV Profile (for demo without OpenAI API)
-    const cvProfile = {
-      name: "John Doe",
-      title: "Senior Full-Stack Developer",
-      seniority_level: "Senior",
-      core_skills: ["JavaScript", "TypeScript", "React", "Node.js", "PostgreSQL", "AWS", "Docker"],
-      locations: ["San Francisco, CA", "Remote"],
-      summary: "Experienced full-stack developer with 7+ years building scalable web applications. Strong expertise in modern JavaScript frameworks, cloud infrastructure, and leading development teams. Proven track record of delivering high-quality products in fast-paced startup environments."
-    };
+    // Try to use OpenAI to parse the CV, fall back to mock if not available
+    let cvProfile;
+    let matches;
+    
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        console.log('Using OpenAI to parse CV...');
+        cvProfile = await analyzeCV(extractedText);
+        matches = await rankJobs(cvProfile);
+        console.log('Successfully parsed CV with OpenAI');
+      } catch (error) {
+        console.error('OpenAI parsing failed, using mock data:', error);
+        cvProfile = getMockProfile();
+        matches = getMockMatches();
+      }
+    } else {
+      console.warn('OPENAI_API_KEY not set, using mock data');
+      cvProfile = getMockProfile();
+      matches = getMockMatches();
+    }
 
-    // Mock job matches with 3-5 bullet point reasons
-    const matches = [
+    // Return comprehensive response
+    return NextResponse.json({
+      cvProfile,
+      matches: matches.matches || matches,
+      jobs: SAMPLE_JOBS,
+      cvDataUrl,  // Include the base64 PDF data URL
+      fileName: file.name,
+      extractedText: extractedText // Include raw text for storage
+    });
+
+  } catch (error) {
+    console.error('Parse error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to parse CV' },
+      { status: 500 }
+    );
+  }
+}
+
+function getMockProfile() {
+  return {
+    name: "John Doe",
+    title: "Senior Full-Stack Developer",
+    seniority_level: "Senior",
+    core_skills: ["JavaScript", "TypeScript", "React", "Node.js", "PostgreSQL", "AWS", "Docker"],
+    locations: ["San Francisco, CA", "Remote"],
+    summary: "Experienced full-stack developer with 7+ years building scalable web applications. Strong expertise in modern JavaScript frameworks, cloud infrastructure, and leading development teams. Proven track record of delivering high-quality products in fast-paced startup environments."
+  };
+}
+
+function getMockMatches() {
+  return [
       {
         jobId: 1,
         score: 95,
