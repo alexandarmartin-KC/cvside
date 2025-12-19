@@ -78,43 +78,43 @@ async function analyzeCV(cvText: string) {
     apiKey: process.env.OPENAI_API_KEY,
   });
 
+  console.log('🤖 Sending CV to OpenAI for parsing...');
+  console.log('📄 CV text preview (first 300 chars):', cvText.substring(0, 300));
+
   const completion = await openai.chat.completions.create({
     model: 'gpt-4',
     messages: [
       {
         role: 'system',
-        content: `You are a precision CV parser. Extract EXACT information from the CV text.
+        content: `You are a precision CV/resume parser. Your job is to extract EXACT information.
 
-CRITICAL RULES:
-1. Extract the person's EXACT full name as written in the CV (including special characters: æ, ø, å, é, etc.)
-2. Extract their EXACT current/most recent job title as written (don't translate or simplify)
-3. List ALL skills, technologies, tools, and certifications mentioned
-4. Extract ALL education entries with institution names and years
-5. If information is in Danish/other languages, keep it exactly as written
-6. Be thorough - don't skip details
+ABSOLUTELY CRITICAL RULES:
+1. The person's NAME must be EXACTLY as written - every letter, every special character (æ, ø, å, é, ü, etc.)
+2. Do NOT translate, simplify, or anglicize names. "Alexx Martin Højgård" stays EXACTLY as "Alexx Martin Højgård"
+3. Job titles must be EXACT - "Eksamineret Sikringsleder, CFPA" NOT "Certified Security Manager"
+4. Extract ALL skills, certifications, technologies mentioned
+5. Keep Danish/foreign text exactly as written
+6. Look at the VERY BEGINNING of the CV - the name is usually in the first few lines
+7. Names often appear right after "CV" header or at the very top
 
-Return ONLY valid JSON with these exact fields:
+Return ONLY valid JSON:
 {
-  "name": "string (EXACT full name from CV)",
-  "title": "string (EXACT job title from CV, don't simplify or translate)",
-  "seniority_level": "string (Junior/Mid/Senior/Lead based on context)",
-  "core_skills": ["array of ALL skills, tools, certifications mentioned"],
-  "locations": ["array of locations/cities/countries mentioned"],
-  "summary": "string (2-3 sentences describing their background and expertise)"
+  "name": "EXACT full name (look at top of CV, after 'CV' header if present)",
+  "title": "EXACT current/recent job title (don't translate)",
+  "seniority_level": "Junior|Mid|Senior|Lead|Executive",
+  "core_skills": ["every skill, tool, certification, technology mentioned"],
+  "locations": ["cities, countries mentioned"],
+  "summary": "2-3 sentence professional summary based on CV content"
 }
-
-Example for Danish CV:
-If CV says "Alexx Martin Højgård" → use EXACTLY that, not "Alex Martin"
-If title is "Eksamineret Sikringsleder, CFPA" → use EXACTLY that, not "Security Leader"
 
 NO MARKDOWN. ONLY JSON.`
       },
       {
         role: 'user',
-        content: `Parse this CV and extract EXACT information:\n\n${cvText.substring(0, 8000)}`
+        content: `Extract information from this CV. The name is at the TOP of the document - find it EXACTLY as written:\n\n${cvText.substring(0, 8000)}`
       }
     ],
-    temperature: 0.1, // Lower temperature for more precise extraction
+    temperature: 0.1,
     response_format: { type: 'json_object' }
   });
 
@@ -124,11 +124,7 @@ NO MARKDOWN. ONLY JSON.`
   }
 
   const parsed = JSON.parse(content);
-  console.log('🤖 OpenAI extracted:', {
-    name: parsed.name,
-    title: parsed.title,
-    skillsCount: parsed.core_skills?.length || 0
-  });
+  console.log('🤖 OpenAI extracted:', JSON.stringify(parsed, null, 2));
 
   return parsed;
 }
@@ -278,29 +274,79 @@ function getMockProfile() {
 // Extract basic info from CV text without AI
 function extractBasicInfoFromText(text: string) {
   console.log('📄 Extracting basic info from CV text (length:', text.length, 'chars)');
+  console.log('📄 First 500 chars of CV text:', text.substring(0, 500));
   
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  console.log('📄 First 10 lines:', lines.slice(0, 10));
   
   // Try to find name - look more carefully in first 15 lines
-  let name = "Professional"; // Default if not found
-  for (let i = 0; i < Math.min(15, lines.length); i++) {
+  let name = "";
+  
+  // Strategy 1: Look for a line that looks like a name (2-4 words, proper case)
+  for (let i = 0; i < Math.min(20, lines.length); i++) {
     const line = lines[i];
-    // Look for lines with 2-4 words, allowing special chars (æ, ø, å, é, etc.)
-    // Must start with capital, 5-50 chars
-    if (line.match(/^[A-ZÆØÅÉ][a-zæøåéèê]+(\s+[A-ZÆØÅÉ][a-zæøåéèê]+){1,3}$/u) && 
-        line.length >= 5 && 
-        line.length <= 50 &&
-        !line.match(/^(CV|Curriculum|Resume|Vitae|Contact|Email|Phone|Address|Mobil|Adresse|Født|Nationalitet|Erfaring|Kontakt)$/i)) {
+    
+    // Skip common headers and labels
+    if (line.match(/^(CV|Curriculum|Resume|Vitae|Contact|Email|Phone|Address|Mobil|Adresse|Født|Nationalitet|Erfaring|Kontakt|Summary|Experience|Education|Skills|Profile)$/i)) {
+      continue;
+    }
+    
+    // Skip lines with dates, emails, phone numbers
+    if (line.match(/@|phone|mobil|tlf|\d{4,}|http|www\./i)) {
+      continue;
+    }
+    
+    // Skip single words unless it's clearly a name
+    const words = line.split(/\s+/);
+    if (words.length < 2 || words.length > 5) continue;
+    
+    // Check if line looks like a person's name (each word starts with capital)
+    const looksLikeName = words.every(word => 
+      word.match(/^[A-ZÆØÅÉÈÊËÄÖÜÁÍÓÚ][a-zæøåéèêëäöüáíóúxx]*$/i) && word.length >= 2
+    );
+    
+    if (looksLikeName && line.length >= 5 && line.length <= 60) {
       name = line;
-      console.log('✓ Found name:', name);
+      console.log('✓ Found name (pattern match):', name);
       break;
     }
-    // Also check for "Name: Value" format
-    if (line.match(/^(Name|Navn|Full Name):\s*(.+)$/i)) {
-      name = line.split(':')[1].trim();
-      console.log('✓ Found name (labeled):', name);
-      break;
+  }
+  
+  // Strategy 2: Look for "Name: Value" or "Navn: Value" format
+  if (!name) {
+    for (const line of lines.slice(0, 15)) {
+      const match = line.match(/^(Name|Navn|Full Name|Fulde Navn)[\s:]+(.+)$/i);
+      if (match) {
+        name = match[2].trim();
+        console.log('✓ Found name (labeled):', name);
+        break;
+      }
     }
+  }
+  
+  // Strategy 3: If CV starts with "CV" header, name is likely the next substantial line
+  if (!name) {
+    for (let i = 0; i < Math.min(5, lines.length); i++) {
+      if (lines[i].match(/^CV$/i)) {
+        // Look at next few lines
+        for (let j = i + 1; j < i + 4 && j < lines.length; j++) {
+          const nextLine = lines[j];
+          // Skip labels like "Født:", "Nationalitet:"
+          if (nextLine.includes(':')) continue;
+          if (nextLine.length >= 5 && nextLine.length <= 60 && !nextLine.match(/^\d/)) {
+            name = nextLine;
+            console.log('✓ Found name (after CV header):', name);
+            break;
+          }
+        }
+        break;
+      }
+    }
+  }
+  
+  if (!name) {
+    name = "Unknown";
+    console.log('⚠️ Could not find name, using "Unknown"');
   }
   
   // Try to find title/role - look for common job title patterns
