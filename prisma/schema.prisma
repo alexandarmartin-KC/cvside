@@ -98,10 +98,6 @@ model CvProfile {
   cvUploadedAt   DateTime?
   cvUrl          String?   @db.Text
   rawCvText      String?   @db.Text // Original CV text for richer AI tailoring
-  
-  // Structured CV data (JSON stored as text)
-  experienceJson  String?  @db.Text // JSON array of work experience
-  educationJson   String?  @db.Text // JSON array of education
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

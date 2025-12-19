@@ -314,8 +314,6 @@ export default function UploadPage() {
           cvFileName: file?.name || 'CV.pdf',
           cvUrl: dataToSave.cvDataUrl || null,
           rawCvText: dataToSave.extractedText || null,
-          experience: dataToSave.cvProfile.experience || [],
-          education: dataToSave.cvProfile.education || [],
         }),
       });
 
