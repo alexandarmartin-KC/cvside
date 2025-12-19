@@ -83,24 +83,38 @@ async function analyzeCV(cvText: string) {
     messages: [
       {
         role: 'system',
-        content: `You are a CV parsing expert. Extract structured information from CVs and return STRICT JSON with these exact fields:
-- name (string)
-- title (string - current or most recent job title)
-- seniority_level (string - e.g., Junior, Mid, Senior, Lead, etc.)
-- core_skills (array of strings - top technical/professional skills)
-- industries (array of strings - industries they've worked in)
-- locations (array of strings - locations mentioned)
-- years_experience_estimate (number - estimated total years)
-- summary (string - brief 2-3 sentence professional summary)
+        content: `You are a precision CV parser. Extract EXACT information from the CV text.
 
-Return ONLY valid JSON, no markdown or additional text.`
+CRITICAL RULES:
+1. Extract the person's EXACT full name as written in the CV (including special characters: æ, ø, å, é, etc.)
+2. Extract their EXACT current/most recent job title as written (don't translate or simplify)
+3. List ALL skills, technologies, tools, and certifications mentioned
+4. Extract ALL education entries with institution names and years
+5. If information is in Danish/other languages, keep it exactly as written
+6. Be thorough - don't skip details
+
+Return ONLY valid JSON with these exact fields:
+{
+  "name": "string (EXACT full name from CV)",
+  "title": "string (EXACT job title from CV, don't simplify or translate)",
+  "seniority_level": "string (Junior/Mid/Senior/Lead based on context)",
+  "core_skills": ["array of ALL skills, tools, certifications mentioned"],
+  "locations": ["array of locations/cities/countries mentioned"],
+  "summary": "string (2-3 sentences describing their background and expertise)"
+}
+
+Example for Danish CV:
+If CV says "Alexx Martin Højgård" → use EXACTLY that, not "Alex Martin"
+If title is "Eksamineret Sikringsleder, CFPA" → use EXACTLY that, not "Security Leader"
+
+NO MARKDOWN. ONLY JSON.`
       },
       {
         role: 'user',
-        content: `Parse this CV:\n\n${cvText}`
+        content: `Parse this CV and extract EXACT information:\n\n${cvText.substring(0, 8000)}`
       }
     ],
-    temperature: 0.3,
+    temperature: 0.1, // Lower temperature for more precise extraction
     response_format: { type: 'json_object' }
   });
 
@@ -109,7 +123,14 @@ Return ONLY valid JSON, no markdown or additional text.`
     throw new Error('No response from OpenAI');
   }
 
-  return JSON.parse(content);
+  const parsed = JSON.parse(content);
+  console.log('🤖 OpenAI extracted:', {
+    name: parsed.name,
+    title: parsed.title,
+    skillsCount: parsed.core_skills?.length || 0
+  });
+
+  return parsed;
 }
 
 async function rankJobs(cvProfile: any) {
