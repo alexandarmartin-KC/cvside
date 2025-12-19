@@ -17,18 +17,24 @@ type TailoredCV = {
   name: string;
   title: string;
   summary: string;
-  skills: string[];
+  skills: {
+    primary: string[];
+    secondary: string[];
+  };
   experience: Array<{
-    title: string;
-    company?: string;
+    company: string;
+    role: string;
     location?: string;
-    duration?: string;
+    start_date: string;
+    end_date: string;
     bullets: string[];
   }>;
   education?: Array<{
-    degree: string;
     institution: string;
-    year?: string;
+    degree: string;
+    field?: string;
+    start_date?: string;
+    end_date?: string;
   }>;
   certifications?: string[];
   projects?: Array<{

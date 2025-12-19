@@ -15,18 +15,24 @@ interface TailoredCVSection {
   name: string;
   title: string;
   summary: string;
-  skills: string[];
+  skills: {
+    primary: string[];
+    secondary: string[];
+  };
   experience: Array<{
-    title: string;
-    company?: string;
+    company: string;
+    role: string;
     location?: string;
-    duration?: string;
+    start_date: string;
+    end_date: string;
     bullets: string[];
   }>;
   education?: Array<{
-    degree: string;
     institution: string;
-    year?: string;
+    degree: string;
+    field?: string;
+    start_date?: string;
+    end_date?: string;
   }>;
   certifications?: string[];
   projects?: Array<{
@@ -188,13 +194,17 @@ async function generateTailoredCV(
       name: cvProfile.name || 'Your Name',
       title: cvProfile.title || job.title,
       summary: cvProfile.summary || `Professional with experience in ${job.skills?.slice(0, 3).join(', ')}. Seeking ${job.title} position at ${job.company}.`,
-      skills: cvProfile.skills || [],
+      skills: {
+        primary: cvProfile.skills?.slice(0, 6) || [],
+        secondary: cvProfile.skills?.slice(6) || []
+      },
       experience: [
         {
-          title: cvProfile.title || 'Professional Experience',
           company: job.company,
+          role: cvProfile.title || job.title,
           location: cvProfile.locations?.[0] || job.location,
-          duration: '',
+          start_date: '2020',
+          end_date: 'Present',
           bullets: [
             'Experience with relevant technologies and methodologies',
             'Proven track record of delivering quality results',
@@ -212,33 +222,52 @@ async function generateTailoredCV(
     apiKey: process.env.OPENAI_API_KEY,
   });
 
-  const systemPrompt = `You are a professional CV tailoring expert. Your task is to tailor a CV to a specific job posting.
+  const systemPrompt = `You are an expert CV tailoring engine for a CV-first job platform.
 
 CRITICAL RULES:
 1. NEVER invent employment history, skills, dates, or qualifications
 2. ONLY use information present in the base CV
-3. You MAY: reorder content, rewrite bullets for impact, emphasize relevant experience, remove irrelevant details
-4. Return ONLY valid JSON matching the exact structure provided
-5. Keep all content truthful and aligned with the original CV
+3. You MAY: reorder content, rewrite bullets for impact, emphasize relevant experience
+4. Return ONLY valid JSON - no explanatory text outside the JSON
+5. All text fields must be plain text (no HTML/Markdown)
+6. Keep all content 100% truthful to the user's real experience
 
-Return a JSON object with this EXACT structure:
+OUTPUT STRUCTURE:
 {
   "name": "string",
-  "title": "string - job-aligned title if truthful",
-  "summary": "string - 2-3 impactful sentences using job keywords",
-  "skills": ["array of skills reordered by relevance"],
+  "title": "string (job-aligned title if truthful)",
+  "summary": "string (3-6 lines, mention relevant skills/experience)",
+  "skills": {
+    "primary": ["most relevant skills first"],
+    "secondary": ["other skills"]
+  },
   "experience": [
     {
-      "title": "string",
-      "company": "string (optional)",
-      "location": "string (optional)",
-      "duration": "string (optional)",
-      "bullets": ["array of impact-focused achievement bullets"]
+      "company": "string",
+      "role": "string",
+      "location": "string or null",
+      "start_date": "string (keep original format)",
+      "end_date": "string (keep original format, e.g. 'Present')",
+      "bullets": ["impact-focused bullets with strong verbs"]
     }
   ],
-  "education": [{"degree": "string", "institution": "string", "year": "string"}] (if available),
-  "certifications": ["array of strings"] (if available),
-  "projects": [{"name": "string", "description": "string", "technologies": ["array"]}] (if available)
+  "education": [
+    {
+      "institution": "string",
+      "degree": "string",
+      "field": "string or null",
+      "start_date": "string or null",
+      "end_date": "string or null"
+    }
+  ],
+  "certifications": ["string array or empty"],
+  "projects": [
+    {
+      "name": "string",
+      "description": "string",
+      "technologies": ["string array"]
+    }
+  ]
 }`;
 
   const userPrompt = `Base CV Data:
@@ -258,7 +287,7 @@ Description: ${job.description}
 
 ${userNotes ? `User Notes: ${userNotes}` : ''}
 
-Tailor the CV to emphasize relevant skills and experience for this job. Rewrite the summary and bullets to align with the job requirements while staying 100% truthful to the original CV data.`;
+Tailor this CV for the target job. Reorder and rewrite content to emphasize relevance. Use impact-focused language. Stay 100% truthful.`;
 
   try {
     const completion = await openai.chat.completions.create({
@@ -281,21 +310,21 @@ Tailor the CV to emphasize relevant skills and experience for this job. Rewrite 
       name: cvProfile.name || 'Your Name',
       title: cvProfile.title || job.title,
       summary: cvProfile.summary || `Professional with experience in ${job.skills?.slice(0, 3).join(', ')}. Seeking ${job.title} position at ${job.company}.`,
-      skills: cvProfile.skills || [],
+      skills: {
+        primary: cvProfile.skills?.slice(0, 6) || [],
+        secondary: cvProfile.skills?.slice(6) || []
+      },
       experience: [
         {
-          title: cvProfile.title || 'Professional Experience',
           company: job.company,
+          role: cvProfile.title || job.title,
           location: cvProfile.locations?.[0] || job.location,
-          duration: '',
-          bullets: [
-            'Experience with relevant technologies and methodologies',
-            'Proven track record of delivering quality results',
-            'Strong collaboration and communication skills'
-          ]
+          start_date: '2020',
+          end_date: 'Present',
+          bullets: ['Key achievement or responsibility']
         }
       ],
-      education: [],
+      education: cvProfile.education || [],
       certifications: [],
       projects: []
     };
@@ -350,13 +379,17 @@ export async function POST(request: NextRequest) {
         name: userWithProfile.cvProfile.name || userWithProfile.name || 'Your Name',
         title: userWithProfile.cvProfile.title || job.title,
         summary: userWithProfile.cvProfile.summary || `Professional seeking ${job.title} position at ${job.company}.`,
-        skills: userWithProfile.cvProfile.skills || [],
+        skills: {
+          primary: userWithProfile.cvProfile.skills?.slice(0, 6) || [],
+          secondary: userWithProfile.cvProfile.skills?.slice(6) || []
+        },
         experience: [
           {
-            title: userWithProfile.cvProfile.title || 'Professional Experience',
             company: job.company,
+            role: userWithProfile.cvProfile.title || job.title,
             location: userWithProfile.cvProfile.locations?.[0] || job.location,
-            duration: '',
+            start_date: '2020',
+            end_date: 'Present',
             bullets: [
               'Relevant experience in the field',
               'Strong technical and professional skills',

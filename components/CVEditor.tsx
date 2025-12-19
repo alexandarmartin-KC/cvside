@@ -6,18 +6,24 @@ type CVData = {
   name: string;
   title: string;
   summary: string;
-  skills: string[];
+  skills: {
+    primary: string[];
+    secondary: string[];
+  };
   experience: Array<{
-    title: string;
-    company?: string;
+    company: string;
+    role: string;
     location?: string;
-    duration?: string;
+    start_date: string;
+    end_date: string;
     bullets: string[];
   }>;
   education?: Array<{
-    degree: string;
     institution: string;
-    year?: string;
+    degree: string;
+    field?: string;
+    start_date?: string;
+    end_date?: string;
   }>;
   certifications?: string[];
   projects?: Array<{
@@ -53,10 +59,11 @@ export function CVEditor({ cv, onChange, template, color }: CVEditorProps) {
       experience: [
         ...cv.experience,
         {
-          title: 'New Position',
           company: 'Company Name',
+          role: 'Job Title',
           location: '',
-          duration: '',
+          start_date: '2020',
+          end_date: 'Present',
           bullets: ['Achievement or responsibility'],
         },
       ],
@@ -148,35 +155,87 @@ export function CVEditor({ cv, onChange, template, color }: CVEditorProps) {
         {/* Skills */}
         <div className="mb-6">
           <h2 className={`text-lg font-semibold mb-3 ${colorClass}`}>Skills</h2>
-          <div className="flex flex-wrap gap-2">
-            {cv.skills.map((skill, idx) => (
-              <div key={idx} className="group relative">
-                <input
-                  type="text"
-                  value={skill}
-                  onChange={(e) => {
-                    const newSkills = [...cv.skills];
-                    newSkills[idx] = e.target.value;
-                    updateField(['skills'], newSkills);
-                  }}
-                  className="px-3 py-1 bg-gray-100 text-gray-800 text-sm rounded border border-transparent focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  onClick={() => {
-                    updateField(['skills'], cv.skills.filter((_, i) => i !== idx));
-                  }}
-                  className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition text-xs flex items-center justify-center"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-            <button
-              onClick={() => updateField(['skills'], [...cv.skills, 'New Skill'])}
-              className="px-3 py-1 bg-blue-50 text-blue-600 text-sm rounded border border-blue-200 hover:bg-blue-100 transition"
-            >
-              + Add Skill
-            </button>
+          
+          {/* Primary Skills */}
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-gray-700 mb-2">Primary Skills</h3>
+            <div className="flex flex-wrap gap-2">
+              {cv.skills.primary.map((skill, idx) => (
+                <div key={idx} className="group relative">
+                  <input
+                    type="text"
+                    value={skill}
+                    onChange={(e) => {
+                      const newSkills = { ...cv.skills };
+                      newSkills.primary[idx] = e.target.value;
+                      updateField(['skills'], newSkills);
+                    }}
+                    className="px-3 py-1 bg-blue-100 text-blue-900 text-sm rounded border border-transparent focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  />
+                  <button
+                    onClick={() => {
+                      const newSkills = { ...cv.skills };
+                      newSkills.primary = newSkills.primary.filter((_, i) => i !== idx);
+                      updateField(['skills'], newSkills);
+                    }}
+                    className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition text-xs flex items-center justify-center"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => {
+                  const newSkills = { ...cv.skills };
+                  newSkills.primary.push('New Skill');
+                  updateField(['skills'], newSkills);
+                }}
+                className="px-3 py-1 bg-blue-50 text-blue-600 text-sm rounded border border-blue-200 hover:bg-blue-100 transition"
+              >
+                + Add Primary Skill
+              </button>
+            </div>
+          </div>
+          
+          {/* Secondary Skills */}
+          <div>
+            <h3 className="text-sm font-medium text-gray-700 mb-2">Secondary Skills</h3>
+            <div className="flex flex-wrap gap-2">
+              {cv.skills.secondary.map((skill, idx) => (
+                <div key={idx} className="group relative">
+                  <input
+                    type="text"
+                    value={skill}
+                    onChange={(e) => {
+                      const newSkills = { ...cv.skills };
+                      newSkills.secondary[idx] = e.target.value;
+                      updateField(['skills'], newSkills);
+                    }}
+                    className="px-3 py-1 bg-gray-100 text-gray-800 text-sm rounded border border-transparent focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={() => {
+                      const newSkills = { ...cv.skills };
+                      newSkills.secondary = newSkills.secondary.filter((_, i) => i !== idx);
+                      updateField(['skills'], newSkills);
+                    }}
+                    className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition text-xs flex items-center justify-center"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => {
+                  const newSkills = { ...cv.skills };
+                  newSkills.secondary.push('New Skill');
+                  updateField(['skills'], newSkills);
+                }}
+                className="px-3 py-1 bg-gray-50 text-gray-600 text-sm rounded border border-gray-200 hover:bg-gray-100 transition"
+              >
+                + Add Secondary Skill
+              </button>
+            </div>
           </div>
         </div>
 
@@ -203,8 +262,8 @@ export function CVEditor({ cv, onChange, template, color }: CVEditorProps) {
 
               <input
                 type="text"
-                value={exp.title}
-                onChange={(e) => updateField(['experience', expIdx, 'title'], e.target.value)}
+                value={exp.role}
+                onChange={(e) => updateField(['experience', expIdx, 'role'], e.target.value)}
                 className="text-lg font-semibold text-gray-900 w-full border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
                 placeholder="Job Title"
               />
@@ -212,7 +271,7 @@ export function CVEditor({ cv, onChange, template, color }: CVEditorProps) {
               <div className="flex flex-wrap gap-2 mt-1">
                 <input
                   type="text"
-                  value={exp.company || ''}
+                  value={exp.company}
                   onChange={(e) => updateField(['experience', expIdx, 'company'], e.target.value)}
                   className="text-gray-600 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
                   placeholder="Company"
@@ -226,10 +285,18 @@ export function CVEditor({ cv, onChange, template, color }: CVEditorProps) {
                 />
                 <input
                   type="text"
-                  value={exp.duration || ''}
-                  onChange={(e) => updateField(['experience', expIdx, 'duration'], e.target.value)}
-                  className="text-gray-600 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
-                  placeholder="Duration (e.g., 2020-2023)"
+                  value={exp.start_date}
+                  onChange={(e) => updateField(['experience', expIdx, 'start_date'], e.target.value)}
+                  className="text-gray-600 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 w-24"
+                  placeholder="Start"
+                />
+                <span className="text-gray-400 self-center">—</span>
+                <input
+                  type="text"
+                  value={exp.end_date}
+                  onChange={(e) => updateField(['experience', expIdx, 'end_date'], e.target.value)}
+                  className="text-gray-600 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 w-24"
+                  placeholder="End"
                 />
               </div>
 
@@ -278,18 +345,27 @@ export function CVEditor({ cv, onChange, template, color }: CVEditorProps) {
                   className="font-medium text-gray-900 w-full border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
                   placeholder="Degree"
                 />
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                   <input
                     type="text"
                     value={edu.institution}
                     onChange={(e) => updateField(['education', idx, 'institution'], e.target.value)}
-                    className="text-gray-600 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
+                    className="text-gray-600 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 flex-1"
                     placeholder="Institution"
                   />
+                  {edu.field && (
+                    <input
+                      type="text"
+                      value={edu.field}
+                      onChange={(e) => updateField(['education', idx, 'field'], e.target.value)}
+                      className="text-gray-600 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
+                      placeholder="Field"
+                    />
+                  )}
                   <input
                     type="text"
-                    value={edu.year || ''}
-                    onChange={(e) => updateField(['education', idx, 'year'], e.target.value)}
+                    value={edu.end_date || ''}
+                    onChange={(e) => updateField(['education', idx, 'end_date'], e.target.value)}
                     className="text-gray-600 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 w-24"
                     placeholder="Year"
                   />
