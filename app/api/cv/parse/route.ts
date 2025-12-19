@@ -78,61 +78,63 @@ async function analyzeCV(cvText: string) {
     apiKey: process.env.OPENAI_API_KEY,
   });
 
-  console.log('🤖 Sending CV to OpenAI for parsing...');
-  console.log('📄 CV text preview (first 500 chars):', cvText.substring(0, 500));
+  console.log('🤖 Sending CV to OpenAI for intelligent parsing...');
 
   const completion = await openai.chat.completions.create({
     model: 'gpt-4',
     messages: [
       {
         role: 'system',
-        content: `You are a CV parser. Extract information from the CV text.
+        content: `You are an expert CV/Resume parser that works with ANY format, language, or structure.
+
+YOUR TASK: Extract structured information from the CV text provided.
 
 RULES:
-1. Extract the person's EXACT full name - do not modify it
-2. For Danish names with æ, ø, å - keep them exactly as written
-3. Extract their professional title (e.g., "Eksamineret Sikringsleder, CFPA")
-4. List ALL skills, tools, certifications, languages mentioned
-5. Extract education with EXACT date ranges (e.g., "2016 - 2019", not just "2019")
-6. Extract work experience with dates, companies, roles, and responsibilities
+1. Extract the person's FULL NAME exactly as written (preserve all special characters: æ, ø, å, é, ü, etc.)
+2. Extract their current/most recent job title exactly as written
+3. Determine seniority level from context (years of experience, job titles)
+4. Extract ALL skills, tools, technologies, certifications, and languages mentioned
+5. Extract ALL work experience entries with dates, companies, roles, and key responsibilities
+6. Extract ALL education entries with dates, institutions, and degrees/certifications
+7. Work with ANY language (Danish, English, German, French, etc.) - keep original text
+8. Handle ANY CV structure (single column, two column, creative layouts)
+9. If a date range is "Present" or "Current" in any language, use the original word (e.g., "Nuværende", "Present", "Aktuell")
 
-The CV may have two columns - look carefully for:
-- Name usually appears near "CV" at the top
-- Title may be at top right or after name
-- Education section headed "Uddannelse"
-- Experience section headed "Erfaring"
-
-Return JSON:
+RETURN THIS EXACT JSON STRUCTURE:
 {
-  "name": "exact full name",
-  "title": "professional title/certification", 
-  "seniority_level": "Junior|Mid|Senior|Lead",
-  "core_skills": ["all skills, tools, certifications"],
-  "locations": ["cities/countries mentioned"],
-  "summary": "2-3 sentence professional summary",
+  "name": "Full name exactly as written",
+  "title": "Current/most recent professional title",
+  "seniority_level": "Junior|Mid|Senior|Lead|Executive",
+  "core_skills": ["skill1", "skill2", "...all skills, tools, certs, languages"],
+  "locations": ["city/country mentioned"],
+  "summary": "2-3 sentence professional summary based on their experience",
   "experience": [
     {
-      "company": "company name",
-      "role": "job title",
-      "location": "location",
-      "start_date": "exact start (e.g., November, 2022)",
-      "end_date": "exact end (e.g., Nuværende or date)",
-      "bullets": ["key responsibilities/achievements"]
+      "company": "Company name",
+      "role": "Job title",
+      "location": "Location if mentioned",
+      "start_date": "Exact start date as written",
+      "end_date": "Exact end date as written (or Present/Nuværende/etc)",
+      "bullets": ["Key responsibility or achievement 1", "..."]
     }
   ],
   "education": [
     {
-      "degree": "degree/certification name",
-      "institution": "school/institution",
-      "start_date": "start year",
-      "end_date": "end year"
+      "degree": "Degree or certification name",
+      "institution": "School/institution name", 
+      "field": "Field of study if mentioned",
+      "start_date": "Start year if mentioned",
+      "end_date": "End year"
     }
   ]
-}`
+}
+
+If any field is not found in the CV, use empty string "" or empty array [].
+List experience and education in reverse chronological order (most recent first).`
       },
       {
         role: 'user',
-        content: `Parse this CV and extract ALL information:\n\n${cvText.substring(0, 10000)}`
+        content: `Parse this CV/Resume and extract all information:\n\n${cvText.substring(0, 12000)}`
       }
     ],
     temperature: 0.1,
@@ -145,7 +147,12 @@ Return JSON:
   }
 
   const parsed = JSON.parse(content);
-  console.log('🤖 OpenAI extracted:', JSON.stringify(parsed, null, 2));
+  console.log('🤖 OpenAI successfully parsed CV');
+  console.log('   Name:', parsed.name);
+  console.log('   Title:', parsed.title);
+  console.log('   Skills count:', parsed.core_skills?.length || 0);
+  console.log('   Experience entries:', parsed.experience?.length || 0);
+  console.log('   Education entries:', parsed.education?.length || 0);
 
   return parsed;
 }
