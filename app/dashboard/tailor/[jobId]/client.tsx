@@ -82,6 +82,7 @@ export function TailorClient({ job }: { job: Job }) {
   const [selectedColor, setSelectedColor] = useState('neutral-black');
   const [userNotes, setUserNotes] = useState('');
   const [showNotes, setShowNotes] = useState(false);
+  const [instructions, setInstructions] = useState<string>('');
 
   const fetchTailoredCV = async (notes?: string) => {
     setLoading(true);
@@ -105,6 +106,7 @@ export function TailorClient({ job }: { job: Job }) {
       setTailoredCV(data.tailored_cv);
       setTemplates(data.design_options.templates);
       setColors(data.design_options.colors);
+      setInstructions(data.instructions_for_user_editing || '');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -152,6 +154,23 @@ export function TailorClient({ job }: { job: Job }) {
 
   return (
     <div className="max-w-7xl mx-auto p-6">
+      {/* Warning Banner for Mock Data */}
+      {instructions && instructions.includes('John Doe') && (
+        <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+          <div className="flex items-start">
+            <svg className="w-6 h-6 text-yellow-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+              <h3 className="text-sm font-semibold text-yellow-800 mb-1">Demo Data Detected</h3>
+              <p className="text-sm text-yellow-700">
+                Your profile currently contains sample data. Please <a href="/upload" className="underline font-semibold hover:text-yellow-900">re-upload your CV</a> to get personalized results with your real information.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">

@@ -466,13 +466,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Log what CV data we're working with
-    console.log('CV Profile data:', {
-      name: userWithProfile.cvProfile.name,
-      title: userWithProfile.cvProfile.title,
-      hasRawCvText: !!(userWithProfile.cvProfile as any).rawCvText,
-      rawCvTextLength: (userWithProfile.cvProfile as any).rawCvText?.length || 0,
-      skillsCount: userWithProfile.cvProfile.skills?.length || 0
+    const cvProfile = userWithProfile.cvProfile;
+    console.log('📋 CV Profile data being used:', {
+      name: cvProfile.name,
+      title: cvProfile.title,
+      hasRawCvText: !!(cvProfile as any).rawCvText,
+      rawCvTextLength: (cvProfile as any).rawCvText?.length || 0,
+      rawCvTextPreview: (cvProfile as any).rawCvText?.substring(0, 100) || 'None',
+      skillsCount: cvProfile.skills?.length || 0,
+      summary: cvProfile.summary?.substring(0, 50) || 'None'
     });
+    
+    // Check if this looks like mock data
+    if (cvProfile.name === 'John Doe' || cvProfile.name?.includes('John Doe')) {
+      console.warn('⚠️ WARNING: CV profile appears to contain mock data!');
+      console.warn('User needs to re-upload their CV to get real data.');
+    }
 
     // Fetch job details
     const job = await prisma.job.findUnique({
@@ -484,13 +493,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate tailored CV (has internal error handling with safe fallback)
-    const tailoredCV = await generateTailoredCV(userWithProfile.cvProfile, job, userNotes);
+    const tailoredCV = await generateTailoredCV(cvProfile, job, userNotes);
 
     // Check if we used fallback (experience array will be populated from rawCvText if available)
     const usedFallback = !process.env.OPENAI_API_KEY;
-    const instructions = usedFallback 
+    const isMockData = cvProfile.name === 'John Doe' || cvProfile.name?.includes('John Doe');
+    
+    let instructions = usedFallback 
       ? '⚠️ Note: Using fallback mode (OpenAI API unavailable or rate limited). CV uses your real data but may lack AI optimization. All sections are editable - click any field to modify text. Use the design panel to customize appearance.'
       : 'All sections are editable. Click any field to modify text. Use the design panel to customize your CV appearance. Changes are saved automatically. Export to PDF or DOCX when ready to apply.';
+    
+    if (isMockData) {
+      instructions = '⚠️ IMPORTANT: Your profile contains demo data ("John Doe"). Please go to /upload and re-upload your real CV to get personalized results. ' + instructions;
+    }
 
     // Construct response
     const response: TailoredCVResponse = {
