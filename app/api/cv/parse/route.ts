@@ -274,12 +274,12 @@ function getMockProfile() {
 // Extract basic info from CV text without AI
 function extractBasicInfoFromText(text: string) {
   console.log('📄 Extracting basic info from CV text (length:', text.length, 'chars)');
-  console.log('📄 First 800 chars of CV text:', text.substring(0, 800));
+  console.log('📄 First 1000 chars of CV text:', text.substring(0, 1000));
   
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  console.log('📄 First 15 lines:', lines.slice(0, 15));
+  console.log('📄 First 20 lines:', lines.slice(0, 20));
   
-  // Words that indicate this is NOT a name (job titles, descriptions, headers)
+  // Words that indicate this is NOT a name
   const notNameIndicators = [
     'ansvarlig', 'koordinering', 'supervision', 'design', 'implementering',
     'procedurer', 'opdatering', 'gennemgang', 'resultater', 'arbejdsopgaver',
@@ -287,134 +287,110 @@ function extractBasicInfoFromText(text: string) {
     'education', 'skills', 'certifications', 'projects', 'references',
     'for ', 'og ', 'med ', 'til ', 'fra ', 'som ', 'hvor ', 'samt ',
     'manager', 'developer', 'engineer', 'specialist', 'consultant', 'lead',
-    'sikkerhed', 'hovedkontor', 'leverandør', 'monitoring', 'control'
+    'sikkerhed', 'hovedkontor', 'leverandør', 'monitoring', 'control',
+    'eksamineret', 'sikringsleder', 'cfpa', 'chauffeur', 'vagtsupervisor',
+    'operatør', 'sikkerhedsvagt', 'kommunikation', 'færdigheder', 'sprog'
   ];
   
   // Try to find name
   let name = "";
   
-  // Strategy 1: Look for lines that look like personal names
-  // A name typically: 2-4 words, each capitalized, no job-related words, relatively short
-  for (let i = 0; i < Math.min(25, lines.length); i++) {
-    const line = lines[i];
-    const lineLower = line.toLowerCase();
-    
-    // Skip if contains indicators that this is NOT a name
-    if (notNameIndicators.some(indicator => lineLower.includes(indicator))) {
-      continue;
-    }
-    
-    // Skip common headers
-    if (line.match(/^(CV|Curriculum|Resume|Vitae|Contact|Email|Phone|Mobil|Adresse|Født|Nationalitet|Erfaring|Kontakt)$/i)) {
-      continue;
-    }
-    
-    // Skip lines with dates, emails, phone numbers, URLs
-    if (line.match(/@|phone|mobil|tlf|\d{4,}|http|www\.|:|\.|,/i)) {
-      continue;
-    }
-    
-    // Skip lines that are too long (names are usually short)
-    if (line.length > 40) continue;
-    
-    // Split into words
-    const words = line.split(/\s+/);
-    
-    // Names typically have 2-4 words
-    if (words.length < 2 || words.length > 4) continue;
-    
-    // Each word should be capitalized and reasonably short (names are typically 2-12 chars)
-    const looksLikeName = words.every(word => {
-      // Must start with capital letter
-      if (!word.match(/^[A-ZÆØÅÉÈÊËÄÖÜÁÍÓÚ]/)) return false;
-      // Must be reasonable length for a name
-      if (word.length < 2 || word.length > 15) return false;
-      // Should not contain numbers
-      if (word.match(/\d/)) return false;
-      return true;
-    });
-    
-    if (looksLikeName) {
-      name = line;
-      console.log('✓ Found name (pattern match):', name);
-      break;
-    }
-  }
-  
-  // Strategy 2: Look for labeled name
-  if (!name) {
-    for (const line of lines.slice(0, 20)) {
-      const match = line.match(/^(Name|Navn|Full Name|Fulde Navn)[\s:]+(.+)$/i);
-      if (match) {
-        name = match[2].trim();
-        console.log('✓ Found name (labeled):', name);
+  // Strategy 1: Look for "CV" followed by a name on the next line
+  for (let i = 0; i < Math.min(10, lines.length); i++) {
+    if (lines[i].match(/^CV$/i) && i + 1 < lines.length) {
+      const nextLine = lines[i + 1];
+      const nextLineLower = nextLine.toLowerCase();
+      
+      // Check it's not a job title or indicator
+      if (!notNameIndicators.some(ind => nextLineLower.includes(ind)) &&
+          !nextLine.includes(':') &&
+          nextLine.length >= 5 && nextLine.length <= 40 &&
+          nextLine.split(/\s+/).length >= 2) {
+        name = nextLine;
+        console.log('✓ Found name (after CV):', name);
         break;
       }
     }
   }
   
-  // Strategy 3: If we find "CV" at the start, the name is likely soon after
+  // Strategy 2: Look for a personal name pattern (2-4 capitalized words, no job keywords)
   if (!name) {
-    for (let i = 0; i < Math.min(5, lines.length); i++) {
-      if (lines[i].match(/^CV$/i)) {
-        for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
-          const candidate = lines[j];
-          const candidateLower = candidate.toLowerCase();
-          
-          // Skip if contains job-related words
-          if (notNameIndicators.some(ind => candidateLower.includes(ind))) continue;
-          // Skip labels
-          if (candidate.includes(':')) continue;
-          // Skip long lines
-          if (candidate.length > 35) continue;
-          // Skip single words
-          if (candidate.split(/\s+/).length < 2) continue;
-          
-          name = candidate;
-          console.log('✓ Found name (after CV header):', name);
-          break;
-        }
-        if (name) break;
+    for (let i = 0; i < Math.min(30, lines.length); i++) {
+      const line = lines[i];
+      const lineLower = line.toLowerCase();
+      
+      // Skip if contains NOT-name indicators
+      if (notNameIndicators.some(ind => lineLower.includes(ind))) continue;
+      
+      // Skip common headers, labels, and lines with special characters
+      if (line.match(/^(CV|Kontakt|Uddannelse|Erfaring|Færdigheder|Sprog|Mobil|Email|Adresse)$/i)) continue;
+      if (line.includes(':') || line.includes('@') || line.includes('+') || line.match(/\d{4}/)) continue;
+      
+      // Skip long lines
+      if (line.length > 35) continue;
+      
+      // Name should have 2-4 words
+      const words = line.split(/\s+/);
+      if (words.length < 2 || words.length > 4) continue;
+      
+      // Each word should start with capital and be reasonable length
+      const looksLikeName = words.every(word => 
+        word.match(/^[A-ZÆØÅÉÈÊËÄÖÜÁÍÓÚ]/) && 
+        word.length >= 2 && word.length <= 15 &&
+        !word.match(/\d/)
+      );
+      
+      if (looksLikeName) {
+        name = line;
+        console.log('✓ Found name (pattern):', name);
+        break;
       }
     }
   }
   
   if (!name) {
     name = "Unknown";
-    console.log('⚠️ Could not find name in CV text');
+    console.log('⚠️ Could not find name');
   }
   
-  // Try to find title/role - look for common job title patterns
+  // Find title - look for "Eksamineret Sikringsleder, CFPA" or similar professional titles
   let title = "";
-  const titleKeywords = [
-    'Developer', 'Engineer', 'Manager', 'Designer', 'Analyst', 'Specialist', 'Consultant', 
-    'Architect', 'Lead', 'Director', 'Chef', 'Leder', 'Sikringsleder', 'Sikkerhedsspecialist',
-    'CFPA', 'Eksamineret', 'Coordinator', 'Administrator', 'Officer'
+  const titlePatterns = [
+    /eksamineret\s+sikringsleder/i,
+    /sikkerhedsspecialist/i,
+    /security\s+(manager|specialist|consultant)/i,
+    /\bCFPA\b/i,
+    /(senior|lead|chief|head)\s+\w+/i
   ];
   
-  for (let i = 0; i < Math.min(20, lines.length); i++) {
-    const line = lines[i];
-    // Skip the name line
-    if (line === name) continue;
-    
-    // Look for lines containing job title keywords
-    if (titleKeywords.some(kw => line.toLowerCase().includes(kw.toLowerCase())) && 
-        line.length > 3 && 
-        line.length < 150) {
-      // Don't pick lines that look like company names or dates
-      if (!line.match(/\d{4}/) && !line.match(/A\/S|ApS|Ltd|Inc|Corp|GmbH/)) {
+  for (const line of lines.slice(0, 30)) {
+    for (const pattern of titlePatterns) {
+      if (line.match(pattern) && line.length < 80) {
+        // Don't use job bullets as title
+        if (!line.startsWith('•') && !line.startsWith('-')) {
+          title = line;
+          console.log('✓ Found title:', title);
+          break;
+        }
+      }
+    }
+    if (title) break;
+  }
+  
+  if (!title) {
+    // Fallback: look for line with "CFPA" or professional designation
+    for (const line of lines.slice(0, 20)) {
+      if (line.match(/CFPA|MBA|PhD|MSc|BSc|CPA|PMP/i) && line.length < 60) {
         title = line;
-        console.log('✓ Found title:', title);
+        console.log('✓ Found title (designation):', title);
         break;
       }
     }
-    
-    // Also check for "Title: Value" or "Current Role:" format
-    if (line.match(/^(Title|Role|Position|Current Role|Titel|Stilling):\s*(.+)$/i)) {
-      title = line.split(':').slice(1).join(':').trim();
-      console.log('✓ Found title (labeled):', title);
-      break;
-    }
+  }
+  
+  if (!title) {
+    title = "Professional";
+    console.log('⚠️ Could not find title');
   }
   
   // Extract skills - look for technical terms, certifications, tools
@@ -427,20 +403,23 @@ function extractBasicInfoFromText(text: string) {
     /\b(HTML|CSS|REST|API|GraphQL|Microservices|Agile|Scrum|CI\/CD)\b/gi,
     
     // Business & Enterprise
-    /\b(SAP|Salesforce|Oracle|Microsoft Dynamics|Tableau|Power BI|Excel|PowerPoint)\b/gi,
+    /\b(SAP|Salesforce|Microsoft Dynamics|Tableau|Power BI)\b/gi,
+    /\b(Microsoft Office|Excel|PowerPoint|Word|Outlook)\b/gi,
     /\b(Project Management|Team Leadership|Budgeting|Strategy|Analysis)\b/gi,
     
-    // Security & Safety
+    // Security & Safety (expanded for your CV)
     /\b(CFPA|ISO\s*\d+|GDPR|Sikkerhed|Security|Safety|Risk Management|Compliance)\b/gi,
     /\b(Physical Security|Cyber Security|Access Control|CCTV|Surveillance)\b/gi,
-    /\b(Milestone|XProtect|Genetec|Lenel|Honeywell)\b/gi,
+    /\b(Milestone|AXIS|XProtect|Genetec|Lenel|Honeywell|SiPass)\b/gi,
+    /\b(TVO|ADK|AIA|SOC|Penetration)\b/gi,
+    /\b(Vagtsupervisor|Sikkerhedsvagt|Sikringsleder)\b/gi,
     
     // General Tools
     /\b(Jira|Confluence|Slack|Teams|Zoom|Asana|Trello|Notion)\b/gi,
     /\b(Photoshop|Illustrator|Figma|Sketch|InDesign|AutoCAD)\b/gi,
     
     // Languages
-    /\b(English|Danish|Dansk|German|Tysk|French|Spanish|Norwegian|Swedish)\b/gi,
+    /\b(English|Engelsk|Danish|Dansk|German|Tysk|French|Spanish|Norwegian|Swedish)\b/gi,
   ];
   
   const skillsSet = new Set<string>();
