@@ -15,9 +15,10 @@ type JobCardProps = {
   isSaved?: boolean;
   appliedAt?: Date | null;
   actions?: React.ReactNode;
+  showTailorButton?: boolean;
 };
 
-export function JobCard({ job, score, reasons, isNew, isSaved, appliedAt, actions }: JobCardProps) {
+export function JobCard({ job, score, reasons, isNew, isSaved, appliedAt, actions, showTailorButton = true }: JobCardProps) {
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('da-DK', {
       day: 'numeric',
@@ -122,11 +123,20 @@ export function JobCard({ job, score, reasons, isNew, isSaved, appliedAt, action
       )}
 
       {/* Actions */}
-      {actions && (
-        <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
-          {actions}
-        </div>
-      )}
+      <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
+        {showTailorButton && (
+          <Link
+            href={`/dashboard/tailor/${job.id}`}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 transition shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Tailor CV
+          </Link>
+        )}
+        {actions}
+      </div>
     </div>
   );
 }
