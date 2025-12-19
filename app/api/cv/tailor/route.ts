@@ -181,6 +181,34 @@ async function generateTailoredCV(
   job: any,
   userNotes?: string
 ): Promise<TailoredCVSection> {
+  // Check if OpenAI API key is available
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn('OPENAI_API_KEY not set, using fallback CV generation');
+    // Return fallback immediately
+    return {
+      name: cvProfile.name || 'Your Name',
+      title: cvProfile.title || job.title,
+      summary: cvProfile.summary || `Professional with experience in ${job.skills?.slice(0, 3).join(', ')}. Seeking ${job.title} position at ${job.company}.`,
+      skills: cvProfile.skills || [],
+      experience: [
+        {
+          title: cvProfile.title || 'Professional Experience',
+          company: job.company,
+          location: cvProfile.locations?.[0] || job.location,
+          duration: '',
+          bullets: [
+            'Experience with relevant technologies and methodologies',
+            'Proven track record of delivering quality results',
+            'Strong collaboration and communication skills'
+          ]
+        }
+      ],
+      education: [],
+      certifications: [],
+      projects: []
+    };
+  }
+
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
