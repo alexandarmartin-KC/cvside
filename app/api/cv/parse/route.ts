@@ -331,22 +331,4 @@ function getMockMatches() {
         ]
       }
     ];
-
-    // Return comprehensive response
-    return NextResponse.json({
-      cvProfile,
-      matches,
-      jobs: SAMPLE_JOBS,
-      cvDataUrl,  // Include the base64 PDF data URL
-      fileName: file.name,
-      extractedText: extractedText // Include raw text for storage
-    });
-
-  } catch (error) {
-    console.error('Parse error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to parse CV' },
-      { status: 500 }
-    );
-  }
 }
