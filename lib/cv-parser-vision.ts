@@ -480,17 +480,16 @@ CRITICAL RULES FOR EXPERIENCE:
 - DO NOT skip details
 
 EXAMPLE - If you see this in the CV:
-```
+---
 Software Engineer | TechCorp | 2020-2023
 • Led development of microservices architecture using Kubernetes
 • Mentored team of 5 junior developers
 • Implemented CI/CD pipelines reducing deployment time by 50%
 • Collaborated with product team on feature planning
 • Wrote technical documentation
-```
+---
 
-You MUST return:
-```json
+You MUST return this JSON:
 {
   "company": "TechCorp",
   "role": "Software Engineer",
