@@ -52,58 +52,70 @@ export async function POST(request: NextRequest) {
     console.log('🤖 Creating assistant...');
     const assistant = await openai.beta.assistants.create({
       name: 'CV Extractor',
-      instructions: `You are extracting information from a CV/Resume. Extract EVERYTHING you see.
+      instructions: `You are extracting information from a CV/Resume. Your job is to copy EVERYTHING, not summarize.
 
-CRITICAL RULES FOR EXPERIENCE:
-1. Extract EVERY single job/position listed
-2. For EACH job, extract EVERY bullet point/responsibility/achievement listed under it
-3. Even if a job has only 1-2 bullets, extract them
-4. Even if a job seems to have no bullets but has a description, extract that as bullets
-5. DO NOT leave any job with empty bullets array unless there truly is no text under that job
-6. Look for: bullet points (•, -, *), numbered lists, or paragraph descriptions
-7. If job has a paragraph description instead of bullets, split it into separate bullet points
+ULTRA-CRITICAL RULES FOR BULLETS/RESPONSIBILITIES:
+1. Read the ENTIRE section under each job
+2. Extract EVERY SINGLE line, bullet point, responsibility, or achievement
+3. DO NOT summarize, condense, or combine multiple points
+4. DO NOT skip any bullets even if they seem similar
+5. If you see 10 separate lines/bullets under a job, extract all 10 separately
+6. If you see 15 bullets, extract all 15
+7. Count the bullets in the original - your extracted list must have the same number
+8. Each line that describes work/achievement/responsibility = separate bullet
 
-EXAMPLE - If the CV shows:
+EXAMPLE - If CV shows under a job:
 ---
-Vagtsupervisor | Ørsted | 2021-2022
-• Supervised security team
-• Managed daily operations
+• Design og implementering af kontrolcentral
+• Gennemgang af TVO løsning
+• Opdatering af procedurer for adgangskort
+• Sikkerhedsansvarlig for hovedkontor
+• Leverandøransvarlig
+• Teknisk support på ADK/TVO/AIA
+• Efterforskning af hændelser
+• Ansvarlig for global procedure
+• Udarbejdelse af sikkerhedskampagner
 ---
-You MUST return:
-{
-  "company": "Ørsted",
-  "role": "Vagtsupervisor", 
-  "bullets": ["Supervised security team", "Managed daily operations"]
-}
 
-If NO bullets visible under a job, look for ANY text/description and extract it.
+You MUST extract ALL 9 bullets, not just 3-4 of them.
 
-Return ONLY this JSON structure:
+WHAT TO LOOK FOR:
+- Bullet points starting with •, -, *, numbers
+- Separate lines describing different tasks
+- Lines starting with action verbs (Design, Gennemgang, Opdatering, etc.)
+- Any text that describes what the person did in that role
+
+Return ONLY this JSON:
 {
   "name": "full name",
   "email": "email",
-  "phone": "phone number",
-  "location": "full address/location",
-  "title": "current job title/professional headline",
-  "summary": "professional summary if present",
+  "phone": "phone with country code",
+  "location": "complete address as shown",
+  "title": "current job title",
+  "summary": "summary if any",
   "experience": [
     {
-      "company": "company name",
+      "company": "company",
       "role": "job title",
-      "start_date": "start date (e.g. 'November 2022', '2022', etc.)",
-      "end_date": "end date or 'Nuværende' or 'Present'",
-      "location": "job location if shown",
-      "bullets": ["responsibility 1", "responsibility 2", "achievement 3", "ALL bullets/descriptions"]
+      "start_date": "date as shown (e.g. November 2022)",
+      "end_date": "date or Nuværende/Present",
+      "location": "location",
+      "bullets": [
+        "EVERY single bullet/line from the CV - DO NOT SKIP ANY",
+        "If the original has 10 bullets, this array must have 10 items",
+        "Copy each line exactly as it appears",
+        "Include ALL technical details, acronyms, specifics"
+      ]
     }
   ],
   "education": [
-    {"institution": "school name", "degree": "degree name", "field": "field of study", "start_date": "year", "end_date": "year"}
+    {"institution": "name", "degree": "degree", "field": "field", "start_date": "year", "end_date": "year"}
   ],
-  "skills": ["skill1", "skill2", "all technical skills"],
-  "languages": ["language with proficiency level"]
+  "skills": ["every skill mentioned"],
+  "languages": ["language with level"]
 }
 
-Be thorough. Extract everything you see in the document.`,
+Remember: Your job is to COPY everything, not summarize. Extract every single bullet point.`,
       model: 'gpt-4o',
       tools: [{ type: 'file_search' }]
     });
@@ -113,7 +125,13 @@ Be thorough. Extract everything you see in the document.`,
     const thread = await openai.beta.threads.create({
       messages: [{
         role: 'user',
-        content: 'Extract ALL information from this CV. Be thorough - extract every job, every bullet point, every skill. Return ONLY the JSON object.',
+        content: `Read the ENTIRE CV document carefully. Extract ALL information - do not summarize or skip anything.
+
+For EACH job, count how many bullet points or responsibility lines there are, then extract EVERY SINGLE ONE.
+
+If a job has 10 bullets in the CV, your extraction must have 10 bullets. Do not reduce it to 3-4.
+
+Return ONLY the JSON object with complete data.`,
         attachments: [{ file_id: uploadedFile.id, tools: [{ type: 'file_search' }] }]
       }]
     });

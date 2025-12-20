@@ -70,22 +70,39 @@ export async function parseCVWithAssistants(pdfBuffer: Buffer, filename: string 
     console.log('🔧 Creating Assistant...');
     const assistant = await openai.beta.assistants.create({
       name: 'CV Parser Expert',
-      instructions: `You are an expert CV/Resume parser. Extract ALL information from the uploaded CV PDF.
+      instructions: `You are a CV parser that COPIES all information, not summarizes.
 
-CRITICAL RULES FOR EXPERIENCE:
-1. Extract EVERY single job/position listed in the CV
-2. For EACH job, extract EVERY bullet point, responsibility, or achievement listed under it
-3. If a job has 1 bullet, extract 1. If it has 10 bullets, extract all 10
-4. DO NOT leave any job with empty bullets array unless there is truly no text under that job
-5. Look for: bullet points (•, -, *, numbers), or paragraph descriptions
-6. If a job has paragraph text instead of bullets, split it into separate points
-7. Even short descriptions should be extracted as bullets
+ULTRA-CRITICAL EXTRACTION RULES:
+1. Read EVERY line under each job section in the CV
+2. Extract EVERY bullet point, responsibility, achievement as a separate item
+3. DO NOT summarize, condense, or combine multiple bullets into one
+4. DO NOT skip bullets even if they seem repetitive
+5. Count the bullets in the original CV - your extraction must match that count
+6. If the CV has 10 bullets under a job, extract all 10
+7. If the CV has 15 bullets, extract all 15
+8. Each line describing work = separate bullet in the array
 
-CRITICAL RULES FOR OTHER DATA:
-- Extract full address/location including street, postal code, city
-- Extract all education entries with complete information
-- Extract ALL technical skills mentioned
-- Extract language proficiency levels exactly as shown
+WHAT COUNTS AS A BULLET:
+- Lines starting with •, -, *, numbers
+- Separate sentences or lines describing different tasks
+- Lines starting with verbs (Design, Gennemgang, Koordinering, etc.)
+- Any distinct statement about responsibilities or achievements
+
+EXAMPLE - If CV shows:
+---
+Sikkerhedsspecialist | Ørsted | Nov 2022 - Nuværende
+• Design og implementering af kontrolcentral
+• Gennemgang af TVO løsning med kameraindstillinger
+• Opdatering af procedurer for adgangskort med SAP
+• Sikkerhedsansvarlig for hovedkontor
+• Leverandøransvarlig - koordinering af leverandør
+• Teknisk support på ADK/TVO/AIA
+• Efterforskning og håndtering af hændelser
+• Ansvarlig for global procedure for adgangskort
+• Udarbejdelse og gennemførelse af kampagner
+---
+
+You MUST extract ALL 9 items, not just 4-5 of them.
 
 Return ONLY a JSON object with this exact structure:
 {
@@ -107,9 +124,10 @@ Return ONLY a JSON object with this exact structure:
       "start_date": "Month Year or Year",
       "end_date": "Month Year or Year or Present or Nuværende",
       "bullets": [
-        "First responsibility exactly as written",
-        "Second responsibility exactly as written",
-        "Continue for ALL bullets/descriptions under this job"
+        "EVERY bullet from CV - copy each one exactly",
+        "If CV has 10 bullets, this array has 10 items",
+        "Include all technical details and specifics",
+        "Do NOT summarize or condense"
       ],
       "confidence": "high"
     }
@@ -140,7 +158,13 @@ Return ONLY a JSON object with this exact structure:
       messages: [
         {
           role: 'user',
-          content: 'Please analyze the uploaded CV PDF and extract ALL information in the specified JSON format. Be extremely thorough - extract every job, every bullet point, every skill. Return ONLY the JSON object, no additional text.',
+          content: `Read this CV document COMPLETELY and THOROUGHLY. 
+
+For each job, count how many bullet points or responsibility lines are listed, then extract EVERY SINGLE ONE as separate items.
+
+DO NOT reduce 10 bullets down to 4. DO NOT summarize. COPY everything exactly.
+
+Return ONLY the JSON object with all data.`,
           attachments: [
             {
               file_id: file.id,
