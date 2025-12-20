@@ -616,19 +616,13 @@ export async function POST(request: NextRequest) {
     
     if (process.env.OPENAI_API_KEY) {
       try {
-        console.log('🚀 Attempting GPT-4o Vision parsing (like ChatGPT)...');
+        console.log('🚀 Using GPT-4o to parse CV (like ChatGPT)...');
+        console.log('📄 Extracted text length:', extractedText.length, 'characters');
         
-        // Try vision-based parsing first (best quality, like ChatGPT)
-        try {
-          cvProfile = await parseCVWithVision(buffer, process.env.OPENAI_API_KEY);
-          console.log('✅ Successfully parsed CV with GPT-4o Vision');
-        } catch (visionError: any) {
-          console.log('⚠️ Vision parsing failed, falling back to text mode:', visionError.message);
-          
-          // Fallback to text-based parsing with GPT-4o
-          cvProfile = await parseCVWithText(extractedText, process.env.OPENAI_API_KEY);
-          console.log('✅ Successfully parsed CV with GPT-4o (text mode)');
-        }
+        // Use GPT-4o with the extracted text
+        // Note: GPT-4o Vision doesn't support PDF directly, so we use text with smart parsing
+        cvProfile = await parseCVWithText(extractedText, process.env.OPENAI_API_KEY);
+        console.log('✅ Successfully parsed CV with GPT-4o');
         
         matches = await rankJobs(cvProfile);
       } catch (error: any) {

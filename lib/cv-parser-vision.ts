@@ -281,8 +281,8 @@ Rules:
 }
 
 /**
- * Parse CV with text fallback (for when vision fails)
- * This uses the extracted text with GPT-4o in text mode
+ * Parse CV with text (using GPT-4o)
+ * This uses the extracted text with GPT-4o's advanced understanding
  */
 export async function parseCVWithText(
   extractedText: string,
@@ -290,22 +290,29 @@ export async function parseCVWithText(
 ): Promise<ParsedCV> {
   const openai = new OpenAI({ apiKey });
 
-  console.log('🔬 CV PARSER - Using GPT-4o (text mode)');
+  console.log('🔬 CV PARSER - Using GPT-4o');
   console.log('📄 Text length:', extractedText.length, 'characters');
 
-  const systemPrompt = `You are an expert CV/Resume parser. Analyze the CV text and extract structured information.
+  const systemPrompt = `You are an expert CV/Resume parser with deep understanding of professional documents.
 
-This is extracted text from a PDF, so the formatting might be broken. Do your best to identify sections and extract accurate information.
+Your task: Extract ALL information from this CV comprehensively and accurately.
 
-Return your response as valid JSON with this structure:
+CRITICAL RULES:
+1. Extract EVERYTHING you see - be thorough
+2. Do NOT skip any work experience or education entries
+3. Do NOT invent information that isn't present
+4. If formatting is messy, use context to understand structure
+5. Return complete, detailed information
+
+OUTPUT FORMAT (JSON):
 {
   "name": "Full Name",
-  "name_confidence": "high/medium/low",
-  "title": "Professional Title",
-  "summary": "Professional summary...",
+  "name_confidence": "high|medium|low",
+  "title": "Professional Title or Role",
+  "summary": "Professional summary if present",
   "contact": {
     "email": "email@example.com",
-    "phone": "+123456",
+    "phone": "+1234567890",
     "location": "City, Country",
     "linkedin": "https://linkedin.com/in/..."
   },
@@ -313,31 +320,78 @@ Return your response as valid JSON with this structure:
     {
       "company": "Company Name",
       "role": "Job Title",
-      "start_date": "2020",
-      "end_date": "Present",
-      "description": "Responsibilities...",
+      "location": "City, Country",
+      "start_date": "YYYY-MM or YYYY",
+      "end_date": "YYYY-MM or YYYY or Present",
+      "description": "Detailed responsibilities and achievements",
       "confidence": "high"
     }
   ],
   "education": [
     {
       "institution": "University Name",
-      "degree": "Degree Type",
+      "degree": "Degree Type (Bachelor, Master, PhD, etc.)",
       "field": "Field of Study",
-      "start_date": "2015",
-      "end_date": "2019",
+      "location": "City, Country",
+      "start_date": "YYYY",
+      "end_date": "YYYY",
       "confidence": "high"
     }
   ],
-  "skills": ["Skill1", "Skill2"],
-  "languages": ["Language1 (Level)", "Language2"]
+  "skills": ["Skill1", "Skill2", "Skill3"],
+  "languages": ["English (Native)", "Spanish (Fluent)"],
+  "seniority_level": "Junior|Mid|Senior|Lead|Principal"
 }
 
-Rules:
-- Only extract clearly visible information
-- Separate technical skills from spoken languages
-- Use null for missing fields
-- Return ONLY valid JSON`;
+EXTRACTION GUIDELINES:
+
+**Personal Info:**
+- Name: Usually at the top, largest text
+- Title: Often right after name (e.g., "Senior Developer", "Product Manager")
+- Contact: Email, phone, location usually in header
+- LinkedIn: Look for linkedin.com URLs
+
+**Experience:**
+- Look for: "Experience", "Work History", "Employment", "Professional Experience"
+- Common patterns: Company | Role | Dates | Location
+- Extract ALL jobs, even if formatting is inconsistent
+- Dates format: Try to standardize to YYYY-MM or YYYY
+- Description: Combine all bullet points into one paragraph
+- If you see responsibilities, achievements, or bullet points - include them
+
+**Education:**
+- Look for: "Education", "Academic Background", "Qualifications"
+- Extract: Institution, Degree type, Field, Dates
+- Common degrees: Bachelor, Master, PhD, Diploma, Certificate
+
+**Skills:**
+- Look for: "Skills", "Technical Skills", "Core Competencies", "Technologies"
+- Extract: Programming languages, frameworks, tools, methodologies
+- DO NOT include spoken languages (those go in "languages" field)
+- Examples: JavaScript, Python, React, AWS, Agile, Docker
+
+**Languages (Spoken):**
+- Look for: "Languages", "Language Skills"
+- Extract spoken/written languages only
+- Include proficiency if mentioned: "English (Native)", "French (Intermediate)"
+- Examples: English, Spanish, German, Mandarin, Danish
+
+**Seniority Level:**
+- Determine from job titles and experience years
+- Junior: 0-2 years, entry-level roles
+- Mid: 3-5 years, standard roles
+- Senior: 6+ years, senior titles
+- Lead/Principal: Leadership roles, 10+ years
+
+IMPORTANT NOTES:
+- The text might be messy due to PDF extraction
+- Use context clues to identify sections
+- Dates might be separated from job titles
+- Multi-column layouts get merged together
+- Look for common section headers even if formatted oddly
+- Extract company names even if formatting is inconsistent
+
+Return ONLY valid JSON, no additional text or markdown formatting.`;
 
   try {
     const completion = await openai.chat.completions.create({
@@ -349,7 +403,7 @@ Rules:
         },
         {
           role: 'user',
-          content: `Parse this CV text:\n\n${extractedText.substring(0, 20000)}`
+          content: `Parse this CV completely and thoroughly. Extract ALL information:\n\n${extractedText.substring(0, 30000)}`
         }
       ],
       temperature: 0,
@@ -363,7 +417,13 @@ Rules:
     }
 
     const parsed = JSON.parse(content);
-    console.log('✅ Successfully parsed CV with GPT-4o (text mode)');
+    console.log('✅ Successfully parsed CV with GPT-4o');
+    console.log('   Name:', parsed.name || 'Not found');
+    console.log('   Title:', parsed.title || 'Not found');
+    console.log('   Experience entries:', parsed.experience?.length || 0);
+    console.log('   Education entries:', parsed.education?.length || 0);
+    console.log('   Skills:', parsed.skills?.length || 0);
+    console.log('   Languages:', parsed.languages?.length || 0);
 
     // Add IDs
     if (parsed.experience) {
@@ -380,10 +440,17 @@ Rules:
       }));
     }
 
+    // Ensure seniority_level is set
+    if (!parsed.seniority_level && parsed.experience?.length > 0) {
+      // Estimate from experience
+      const years = parsed.experience.length;
+      parsed.seniority_level = years >= 6 ? 'Senior' : years >= 3 ? 'Mid' : 'Junior';
+    }
+
     return parsed as ParsedCV;
 
   } catch (error: any) {
-    console.error('❌ Text parsing with GPT-4o failed:', error.message);
+    console.error('❌ GPT-4o parsing failed:', error.message);
     throw error;
   }
 }
