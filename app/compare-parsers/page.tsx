@@ -12,6 +12,10 @@ export default function CompareMethodsPage() {
     assistants: null,
     direct: null
   });
+  const [showJson, setShowJson] = useState<{ assistants: boolean; direct: boolean }>({
+    assistants: false,
+    direct: false
+  });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -100,6 +104,21 @@ export default function CompareMethodsPage() {
                 <p className="text-red-600">{results.assistants.error}</p>
               ) : results.assistants ? (
                 <div className="space-y-4">
+                  <button
+                    onClick={() => setShowJson(prev => ({ ...prev, assistants: !prev.assistants }))}
+                    className="w-full bg-blue-50 text-blue-700 py-2 px-3 rounded font-medium text-sm hover:bg-blue-100"
+                  >
+                    {showJson.assistants ? '👁️ Hide JSON' : '📋 Show Full JSON'}
+                  </button>
+                  
+                  {showJson.assistants && (
+                    <div className="bg-gray-900 rounded p-4">
+                      <pre className="text-green-400 text-xs overflow-auto max-h-96">
+                        {JSON.stringify(results.assistants, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                  
                   {results.assistants.experience?.map((exp: any, idx: number) => (
                     <div key={idx} className="border-l-4 border-blue-500 pl-4">
                       <p className="font-semibold text-sm">{exp.role}</p>
@@ -116,15 +135,6 @@ export default function CompareMethodsPage() {
                       )}
                     </div>
                   ))}
-                  
-                  <details className="mt-4">
-                    <summary className="cursor-pointer text-sm font-semibold text-blue-600 hover:text-blue-800">
-                      📋 View Full JSON
-                    </summary>
-                    <pre className="mt-2 bg-gray-900 text-green-400 p-4 rounded text-xs overflow-auto max-h-96">
-                      {JSON.stringify(results.assistants, null, 2)}
-                    </pre>
-                  </details>
                 </div>
               ) : (
                 <p className="text-gray-400">No result yet</p>
@@ -148,6 +158,21 @@ export default function CompareMethodsPage() {
                 <p className="text-red-600">{results.direct.error}</p>
               ) : results.direct ? (
                 <div className="space-y-4">
+                  <button
+                    onClick={() => setShowJson(prev => ({ ...prev, direct: !prev.direct }))}
+                    className="w-full bg-green-50 text-green-700 py-2 px-3 rounded font-medium text-sm hover:bg-green-100"
+                  >
+                    {showJson.direct ? '👁️ Hide JSON' : '📋 Show Full JSON'}
+                  </button>
+                  
+                  {showJson.direct && (
+                    <div className="bg-gray-900 rounded p-4">
+                      <pre className="text-green-400 text-xs overflow-auto max-h-96">
+                        {JSON.stringify(results.direct, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                  
                   {results.direct.experience?.map((exp: any, idx: number) => (
                     <div key={idx} className="border-l-4 border-green-500 pl-4">
                       <p className="font-semibold text-sm">{exp.role}</p>
@@ -164,15 +189,6 @@ export default function CompareMethodsPage() {
                       )}
                     </div>
                   ))}
-                  
-                  <details className="mt-4">
-                    <summary className="cursor-pointer text-sm font-semibold text-green-600 hover:text-green-800">
-                      📋 View Full JSON
-                    </summary>
-                    <pre className="mt-2 bg-gray-900 text-green-400 p-4 rounded text-xs overflow-auto max-h-96">
-                      {JSON.stringify(results.direct, null, 2)}
-                    </pre>
-                  </details>
                 </div>
               ) : (
                 <p className="text-gray-400">No result yet</p>
