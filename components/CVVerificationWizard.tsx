@@ -595,6 +595,19 @@ function ExperienceCard({
           <p className="text-sm text-gray-700 mt-0.5">{experience.role || 'Unknown Role'}</p>
           {dateRange && <p className="text-xs text-gray-500 mt-1">{dateRange}</p>}
           {experience.location && <p className="text-xs text-gray-500">📍 {experience.location}</p>}
+          {experience.bullets && experience.bullets.length > 0 && (
+            <ul className="mt-2 space-y-1 text-sm text-gray-600">
+              {experience.bullets.slice(0, 3).map((bullet, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className="text-gray-400 mt-0.5">•</span>
+                  <span className="flex-1">{bullet}</span>
+                </li>
+              ))}
+              {experience.bullets.length > 3 && (
+                <li className="text-xs text-gray-400 italic">+ {experience.bullets.length - 3} more...</li>
+              )}
+            </ul>
+          )}
           {experience.date_confidence === 'low' && (
             <p className="text-xs text-amber-600 mt-1">⚠️ Low confidence dates</p>
           )}

@@ -323,7 +323,11 @@ OUTPUT FORMAT (JSON):
       "location": "City, Country",
       "start_date": "YYYY-MM or YYYY",
       "end_date": "YYYY-MM or YYYY or Present",
-      "description": "Detailed responsibilities and achievements",
+      "bullets": [
+        "First responsibility or achievement",
+        "Second responsibility or achievement",
+        "Third responsibility or achievement"
+      ],
       "confidence": "high"
     }
   ],
@@ -356,8 +360,10 @@ EXTRACTION GUIDELINES:
 - Common patterns: Company | Role | Dates | Location
 - Extract ALL jobs, even if formatting is inconsistent
 - Dates format: Try to standardize to YYYY-MM or YYYY
-- Description: Combine all bullet points into one paragraph
-- If you see responsibilities, achievements, or bullet points - include them
+- Bullets: Extract ALL bullet points, responsibilities, and achievements as separate array items
+- IMPORTANT: Return bullets as an array, not a single description string
+- Each bullet should be a separate achievement, responsibility, or project
+- If you see responsibilities, achievements, or bullet points - include them ALL
 
 **Education:**
 - Look for: "Education", "Academic Background", "Qualifications"
@@ -425,12 +431,25 @@ Return ONLY valid JSON, no additional text or markdown formatting.`;
     console.log('   Skills:', parsed.skills?.length || 0);
     console.log('   Languages:', parsed.languages?.length || 0);
 
-    // Add IDs
+    // Add IDs and convert description to bullets
     if (parsed.experience) {
-      parsed.experience = parsed.experience.map((exp: any, idx: number) => ({
-        ...exp,
-        id: exp.id || `exp_${idx + 1}`
-      }));
+      parsed.experience = parsed.experience.map((exp: any, idx: number) => {
+        // Convert description string to bullets array if needed
+        let bullets = exp.bullets || [];
+        if (exp.description && !exp.bullets) {
+          // Split description into bullet points
+          bullets = exp.description
+            .split(/[\n\r]+/)
+            .map((line: string) => line.trim())
+            .filter((line: string) => line.length > 0 && line !== '-');
+        }
+        
+        return {
+          ...exp,
+          id: exp.id || `exp_${idx + 1}`,
+          bullets: bullets.length > 0 ? bullets : undefined
+        };
+      });
     }
 
     if (parsed.education) {
