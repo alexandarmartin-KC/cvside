@@ -152,10 +152,20 @@ NAME RULES:
 - If uncertain, set name_confidence = "low"
 
 -----------------------------------
+SKILLS & LANGUAGES RULES:
+-----------------------------------
+- Skills are technical abilities, tools, frameworks, methodologies (e.g., "Python", "React", "Agile", "AWS")
+- Languages are spoken/written languages (e.g., "English", "Danish", "Spanish", "Mandarin")
+- IMPORTANT: Separate languages from skills - do NOT include language names in the skills array
+- Common language keywords: English, Danish, Dansk, Spanish, French, German, Swedish, Norwegian, Finnish, Dutch, Italian, Portuguese, Russian, Chinese, Mandarin, Japanese, Korean, Arabic, Hindi, etc.
+- If you see language proficiency (Native, Fluent, Intermediate, Basic, C1, B2, etc.), include it as an object: {"name": "Danish", "proficiency": "Native"}
+- Otherwise, just the language name as a string
+
+-----------------------------------
 DATE RULES:
 -----------------------------------
 - Only extract dates exactly as written
-- Do NOT infer missing months/years
+- DO NOT infer missing months/years
 - If date does not confidently belong to a job → start & end = null, confidence low
 - Preserve original ordering and formatting
 - Prefer to leave ambiguous date associations unresolved
@@ -163,11 +173,14 @@ DATE RULES:
 -----------------------------------
 EXPERIENCE RULES:
 -----------------------------------
+- CRITICAL: Extract ALL work experience entries from the CV
+- A job/experience entry is any past or current employment
 - Collapse lines that clearly belong to a job into a single experience object
 - A job is defined by at least a company OR a role
 - Bullets may follow without a header; include them if they appear plausibly linked
 - If unsure about grouping, assign to job but mark date_confidence low
 - Always include a source_snippet showing the raw lines used
+- DO NOT skip experiences - include everything found in the CV
 
 -----------------------------------
 OUTPUT FORMAT (STRICT)
@@ -186,7 +199,12 @@ Return a single JSON object in exactly this format:
     "linkedin": "string or null"
   },
   "skills": ["string", ...],
-  "languages": ["string", ...],
+  "languages": [
+    "string" 
+    OR 
+    {"name": "string", "proficiency": "Native" | "Fluent" | "Intermediate" | "Basic" | null},
+    ...
+  ],
   "experience": [
     {
       "id": "exp_1",

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { JobCard } from '@/components/JobCard';
 import { MarkAppliedButton } from '../matches/client';
+import CVVerificationWizard from '@/components/CVVerificationWizard';
 
 type CvProfile = {
   id: string;
@@ -30,6 +31,9 @@ export function ProfileForm({ profile }: { profile: CvProfile }) {
   const [uploadError, setUploadError] = useState('');
   const [uploadStep, setUploadStep] = useState(0);
   const [showProgress, setShowProgress] = useState(true);
+  const [showEditWizard, setShowEditWizard] = useState(false);
+  const [cvProfileData, setCvProfileData] = useState<any>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -147,6 +151,55 @@ export function ProfileForm({ profile }: { profile: CvProfile }) {
 
   const handleReplaceClick = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleEditDetails = async () => {
+    setLoadingProfile(true);
+    try {
+      const response = await fetch('/api/cv/get-profile');
+      if (!response.ok) {
+        throw new Error('Failed to load profile');
+      }
+      const data = await response.json();
+      setCvProfileData(data);
+      setShowEditWizard(true);
+    } catch (error) {
+      console.error('Error loading profile:', error);
+      alert('Failed to load profile data');
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
+  const handleWizardComplete = async (verifiedProfile: any) => {
+    try {
+      // Save the verified profile
+      const response = await fetch('/api/cv/save-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cvProfile: verifiedProfile,
+          workPreference: workPreference
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save profile');
+      }
+
+      setShowEditWizard(false);
+      router.refresh();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      alert('Failed to save changes');
+    }
+  };
+
+  const handleWizardCancel = () => {
+    setShowEditWizard(false);
+    setCvProfileData(null);
   };
 
   return (
@@ -427,7 +480,17 @@ export function ProfileForm({ profile }: { profile: CvProfile }) {
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
-              {uploading ? 'Uploading...' : 'Upload CV'}
+              {uploading ? 'Uploading...' : 'Upload New CV'}
+            </button>
+            <button
+              onClick={handleEditDetails}
+              disabled={loadingProfile}
+              className="inline-flex items-center px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              {loadingProfile ? 'Loading...' : 'Edit CV Details'}
             </button>
             {uploadError && (
               <p className="mt-3 text-sm text-red-600">{uploadError}</p>
@@ -435,6 +498,15 @@ export function ProfileForm({ profile }: { profile: CvProfile }) {
           </div>
         )}
       </div>
+
+      {/* CV Verification Wizard for editing */}
+      {showEditWizard && cvProfileData && (
+        <CVVerificationWizard
+          cvProfile={cvProfileData}
+          onComplete={handleWizardComplete}
+          onCancel={handleWizardCancel}
+        />
+      )}
 
       {/* Card 3: Work Preference */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">

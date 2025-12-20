@@ -26,6 +26,11 @@ interface Education {
   source_snippet?: string;
 }
 
+interface Language {
+  name: string;
+  proficiency?: 'Native' | 'Fluent' | 'Intermediate' | 'Basic' | null;
+}
+
 interface CVProfile {
   name: string | null;
   name_confidence?: string;
@@ -38,7 +43,7 @@ interface CVProfile {
     linkedin?: string | null;
   };
   skills?: string[];
-  languages?: string[];
+  languages?: (string | Language)[];
   experience?: Experience[];
   education?: Education[];
 }
@@ -849,19 +854,26 @@ function LanguagesList({
   onSave,
   onCancel
 }: {
-  languages: string[];
+  languages: (string | Language)[];
   isEditing: boolean;
   onEdit: () => void;
-  onSave: (value: string[]) => void;
+  onSave: (value: (string | Language)[]) => void;
   onCancel: () => void;
 }) {
-  const [editValue, setEditValue] = useState(languages);
+  // Normalize languages to Language objects
+  const normalizedLanguages = languages.map(lang => 
+    typeof lang === 'string' ? { name: lang, proficiency: null } : lang
+  );
+  
+  const [editValue, setEditValue] = useState<Language[]>(normalizedLanguages);
   const [newLanguage, setNewLanguage] = useState('');
+  const [newProficiency, setNewProficiency] = useState<Language['proficiency']>('Fluent');
 
   const handleAddLanguage = () => {
-    if (newLanguage.trim() && !editValue.includes(newLanguage.trim())) {
-      setEditValue([...editValue, newLanguage.trim()]);
+    if (newLanguage.trim() && !editValue.some(l => l.name.toLowerCase() === newLanguage.trim().toLowerCase())) {
+      setEditValue([...editValue, { name: newLanguage.trim(), proficiency: newProficiency }]);
       setNewLanguage('');
+      setNewProficiency('Fluent');
     }
   };
 
@@ -869,9 +881,15 @@ function LanguagesList({
     setEditValue(editValue.filter((_, i) => i !== index));
   };
 
+  const handleUpdateProficiency = (index: number, proficiency: Language['proficiency']) => {
+    const updated = [...editValue];
+    updated[index] = { ...updated[index], proficiency };
+    setEditValue(updated);
+  };
+
   if (isEditing) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="flex gap-2">
           <input
             type="text"
@@ -881,6 +899,16 @@ function LanguagesList({
             className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="Add a language..."
           />
+          <select
+            value={newProficiency || ''}
+            onChange={(e) => setNewProficiency(e.target.value as Language['proficiency'])}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="Native">Native</option>
+            <option value="Fluent">Fluent</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Basic">Basic</option>
+          </select>
           <button
             onClick={handleAddLanguage}
             className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
@@ -888,20 +916,28 @@ function LanguagesList({
             Add
           </button>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="space-y-2">
           {editValue?.map((lang, idx) => (
-            <span
-              key={idx}
-              className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-sm"
-            >
-              {lang}
+            <div key={idx} className="flex items-center gap-2 bg-purple-50 rounded-lg p-3">
+              <span className="flex-1 text-purple-900 font-medium">{lang.name}</span>
+              <select
+                value={lang.proficiency || ''}
+                onChange={(e) => handleUpdateProficiency(idx, e.target.value as Language['proficiency'])}
+                className="px-3 py-1.5 text-sm border border-purple-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white"
+              >
+                <option value="">Not specified</option>
+                <option value="Native">Native</option>
+                <option value="Fluent">Fluent</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Basic">Basic</option>
+              </select>
               <button
                 onClick={() => handleRemoveLanguage(idx)}
-                className="ml-1 text-purple-400 hover:text-purple-600 font-bold"
+                className="p-1.5 text-purple-400 hover:text-purple-600 font-bold"
               >
                 ×
               </button>
-            </span>
+            </div>
           ))}
         </div>
         <div className="flex gap-2 pt-2">
@@ -924,14 +960,16 @@ function LanguagesList({
 
   return (
     <div className="group">
-      <div className="flex flex-wrap gap-2">
-        {languages.map((lang, idx) => (
-          <span
-            key={idx}
-            className="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-sm font-medium"
-          >
-            {lang}
-          </span>
+      <div className="space-y-2">
+        {normalizedLanguages.map((lang, idx) => (
+          <div key={idx} className="flex items-center justify-between bg-purple-50 rounded-lg px-4 py-2.5">
+            <span className="text-purple-900 font-medium">{lang.name}</span>
+            {lang.proficiency && (
+              <span className="text-xs text-purple-600 bg-purple-100 px-2.5 py-1 rounded-full">
+                {lang.proficiency}
+              </span>
+            )}
+          </div>
         ))}
       </div>
       <button
