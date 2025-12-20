@@ -451,6 +451,11 @@ export default function UploadPage() {
     if (validateFile(selectedFile)) {
       setFile(selectedFile);
       setError('');
+      setStatus('');
+      setResult(null);
+      setProfileSaved(false);
+      setShowVerificationWizard(false);
+      setPendingCvData(null);
       setCurrentStep(1); // Step 1: CV uploaded
     } else {
       setFile(null);
@@ -476,6 +481,11 @@ export default function UploadPage() {
     if (droppedFile && validateFile(droppedFile)) {
       setFile(droppedFile);
       setError('');
+      setStatus('');
+      setResult(null);
+      setProfileSaved(false);
+      setShowVerificationWizard(false);
+      setPendingCvData(null);
       setCurrentStep(1); // Step 1: CV uploaded
     } else if (droppedFile) {
       setFile(null);
@@ -490,7 +500,12 @@ export default function UploadPage() {
   const handleRemoveFile = () => {
     setFile(null);
     setError('');
+    setStatus('');
     setCurrentStep(0);
+    setResult(null);
+    setProfileSaved(false);
+    setShowVerificationWizard(false);
+    setPendingCvData(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -855,10 +870,14 @@ export default function UploadPage() {
                   </div>
                   <button
                     onClick={() => {
-                      // Reset state for new upload
+                      // Reset all state for new upload
                       setResult(null);
                       setProfileSaved(false);
                       setCurrentStep(0);
+                      setShowVerificationWizard(false);
+                      setPendingCvData(null);
+                      setStatus('');
+                      setError('');
                       handleDropzoneClick();
                     }}
                     className="ml-4 text-sm font-medium text-blue-600 hover:text-blue-800 focus:outline-none focus:underline"
