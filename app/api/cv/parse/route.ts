@@ -85,52 +85,76 @@ async function analyzeCV(cvText: string) {
     messages: [
       {
         role: 'system',
-        content: `You are an expert CV/Resume parser that works with ANY format, language, or structure.
+        content: `You are a CV parsing engine. Your job is to read raw CV text and output clean structured JSON. The CV can have any layout or design.
 
-YOUR TASK: Extract structured information from the CV text provided.
+The input is the FULL TEXT of a CV extracted from a PDF (line breaks preserved).
+Sometimes the PDF extraction splits lines in strange ways, or moves dates onto separate lines from company names. Do your best to associate them correctly, but **never invent information**.
 
-RULES:
-1. Extract the person's FULL NAME exactly as written (preserve all special characters: æ, ø, å, é, ü, etc.)
-2. Extract their current/most recent job title exactly as written
-3. Determine seniority level from context (years of experience, job titles)
-4. Extract ALL skills, tools, technologies, certifications, and languages mentioned
-5. Extract ALL work experience entries with dates, companies, roles, and key responsibilities
-6. Extract ALL education entries with dates, institutions, and degrees/certifications
-7. Work with ANY language (Danish, English, German, French, etc.) - keep original text
-8. Handle ANY CV structure (single column, two column, creative layouts)
-9. If a date range is "Present" or "Current" in any language, use the original word (e.g., "Nuværende", "Present", "Aktuell")
+Your goals:
+1. Identify the candidate's name.
+2. Extract core profile info.
+3. Extract work experience with correct date ranges, as reliably as possible.
+4. Extract education.
+5. DO NOT hallucinate missing data.
 
-RETURN THIS EXACT JSON STRUCTURE:
+IMPORTANT RULES ABOUT DATES:
+- Only use dates that literally appear in the CV text.
+- Keep the original date string format (e.g. "Nov 2020", "11/2020", "November 2020").
+- If you are NOT certain which dates belong to which job, set "start_date" and "end_date" to null for that job and include the raw lines in "source_snippet" so a human can fix it.
+- Do not invent months or years that are not explicitly written.
+- Do not reorder years (e.g. 2020–2022 must stay that way, never 2022–2020).
+
+IMPORTANT RULES ABOUT NAME:
+- The candidate's full name is usually in the very top lines.
+- Ignore headers like "CV", "Curriculum Vitae", "Resume".
+- If multiple names appear, choose the one that looks like a personal name, especially near contact info (email, phone).
+- If you are unsure, pick your best guess and keep "name_confidence": "low".
+
+OUTPUT FORMAT:
+Return a single JSON object in this shape:
+
 {
-  "name": "Full name exactly as written",
-  "title": "Current/most recent professional title",
-  "seniority_level": "Junior|Mid|Senior|Lead|Executive",
-  "core_skills": ["skill1", "skill2", "...all skills, tools, certs, languages"],
-  "locations": ["city/country mentioned"],
-  "summary": "2-3 sentence professional summary based on their experience",
+  "name": "string",
+  "name_confidence": "high" | "medium" | "low",
+  "title": "string or null",
+  "summary": "string or null",
+  "contact": {
+    "email": "string or null",
+    "phone": "string or null",
+    "location": "string or null",
+    "linkedin": "string or null"
+  },
+  "skills": ["string", ...],
   "experience": [
     {
-      "company": "Company name",
-      "role": "Job title",
-      "location": "Location if mentioned",
-      "start_date": "Exact start date as written",
-      "end_date": "Exact end date as written (or Present/Nuværende/etc)",
-      "bullets": ["Key responsibility or achievement 1", "..."]
+      "company": "string",
+      "role": "string or null",
+      "location": "string or null",
+      "start_date": "string or null",
+      "end_date": "string or null",
+      "date_confidence": "high" | "medium" | "low",
+      "bullets": ["string", ...],
+      "source_snippet": "short excerpt of the original lines for this job"
     }
   ],
   "education": [
     {
-      "degree": "Degree or certification name",
-      "institution": "School/institution name", 
-      "field": "Field of study if mentioned",
-      "start_date": "Start year if mentioned",
-      "end_date": "End year"
+      "institution": "string",
+      "degree": "string or null",
+      "field": "string or null",
+      "start_date": "string or null",
+      "end_date": "string or null",
+      "details": ["string", ...],
+      "source_snippet": "short excerpt of the original lines for this education"
     }
-  ]
+  ],
+  "raw_notes": "optional comments if something was ambiguous"
 }
 
-If any field is not found in the CV, use empty string "" or empty array [].
-List experience and education in reverse chronological order (most recent first).`
+General rules:
+- Do not include any text outside the JSON.
+- If some sections are missing in the CV, return empty arrays for them.
+- Prefer being conservative (null dates + low confidence) over guessing wrong.`
       },
       {
         role: 'user',
@@ -148,9 +172,9 @@ List experience and education in reverse chronological order (most recent first)
 
   const parsed = JSON.parse(content);
   console.log('🤖 OpenAI successfully parsed CV');
-  console.log('   Name:', parsed.name);
+  console.log('   Name:', parsed.name, `(confidence: ${parsed.name_confidence || 'unknown'})`);
   console.log('   Title:', parsed.title);
-  console.log('   Skills count:', parsed.core_skills?.length || 0);
+  console.log('   Skills count:', parsed.skills?.length || 0);
   console.log('   Experience entries:', parsed.experience?.length || 0);
   console.log('   Education entries:', parsed.education?.length || 0);
 
@@ -299,9 +323,9 @@ function getMockProfile() {
   };
 }
 
-// Extract basic info from CV text without AI
+// Extract basic info from CV text without AI - follows strict parsing rules
 function extractBasicInfoFromText(text: string) {
-  console.log('📄 Extracting basic info from CV text (length:', text.length, 'chars)');
+  console.log('📄 Extracting structured info from CV text (length:', text.length, 'chars)');
   console.log('📄 First 1000 chars of CV text:', text.substring(0, 1000));
   
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -380,6 +404,28 @@ function extractBasicInfoFromText(text: string) {
     name = "Unknown";
     console.log('⚠️ Could not find name');
   }
+  
+  let name_confidence: "high" | "medium" | "low" = "medium";
+  if (name === "Unknown") {
+    name_confidence = "low";
+  } else if (name.split(/\s+/).length >= 2 && !name.match(/\d/)) {
+    name_confidence = "high";
+  }
+  
+  // Extract contact information
+  const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi;
+  const phoneRegex = /(\+?\d{1,3}[-.\s]?)?(\(?\d{2,4}\)?[-.\s]?)?\d{3,4}[-.\s]?\d{3,4}/g;
+  const linkedinRegex = /(linkedin\.com\/in\/[a-zA-Z0-9_-]+|linkedin\.com\/pub\/[a-zA-Z0-9_-]+)/gi;
+  
+  const emailMatch = text.match(emailRegex);
+  const phoneMatch = text.match(phoneRegex);
+  const linkedinMatch = text.match(linkedinRegex);
+  
+  const email = emailMatch ? emailMatch[0] : null;
+  const phone = phoneMatch ? phoneMatch[0].trim() : null;
+  const linkedin = linkedinMatch ? `https://${linkedinMatch[0]}` : null;
+  
+  console.log('✓ Contact info - Email:', email, 'Phone:', phone, 'LinkedIn:', linkedin ? 'found' : 'not found');
   
   // Find title - look for "Eksamineret Sikringsleder, CFPA" or similar professional titles
   let title = "";
@@ -487,36 +533,31 @@ function extractBasicInfoFromText(text: string) {
     }
   }
   
-  console.log('✓ Found locations:', locations.join(', ') || 'None');
+  const primaryLocation = locations.length > 0 ? locations[0] : null;
+  console.log('✓ Found location:', primaryLocation || 'None');
   
-  // Determine seniority from context
-  let seniority_level = "Mid";
-  const seniorityText = fullText.toLowerCase();
-  if (seniorityText.match(/senior|lead|principal|staff|architect|chef|leder|director/)) {
-    seniority_level = "Senior";
-  } else if (seniorityText.match(/junior|entry|graduate|intern|trainee/)) {
-    seniority_level = "Junior";
-  } else if (seniorityText.match(/\d+\+?\s*(?:years|år|year)/)) {
-    // Look for year counts
-    const yearMatch = seniorityText.match(/(\d+)\+?\s*(?:years|år)/);
-    if (yearMatch && parseInt(yearMatch[1]) >= 5) {
-      seniority_level = "Senior";
-    }
-  }
-  
-  // Create a summary from extracted data
-  const skillsList = core_skills.slice(0, 4).join(', ') || 'various technologies';
+  // Create a simple summary
+  const skillsList = core_skills.slice(0, 4).join(', ') || 'various skills';
   const summary = title 
-    ? `${title}${core_skills.length > 0 ? ' with expertise in ' + skillsList : ''}. Seeking new opportunities to contribute skills and experience.`
-    : `Professional with expertise in ${skillsList}. Seeking new opportunities.`;
+    ? `${title}${core_skills.length > 0 ? ' with expertise in ' + skillsList : ''}.`
+    : null;
   
+  // Return structured data matching the new CV parsing format
   const result = {
     name,
-    title: title || "Professional",
-    seniority_level,
-    core_skills,
-    locations: locations.length > 0 ? locations : ["Remote"],
-    summary
+    name_confidence,
+    title: title || null,
+    summary,
+    contact: {
+      email,
+      phone,
+      location: primaryLocation,
+      linkedin
+    },
+    skills: core_skills,
+    experience: [] as any[],  // Would need more sophisticated parsing
+    education: [] as any[],   // Would need more sophisticated parsing
+    raw_notes: "Fallback parser used - OpenAI unavailable. Experience and education sections not extracted."
   };
   
   console.log('✅ Extracted profile:', JSON.stringify(result, null, 2));
