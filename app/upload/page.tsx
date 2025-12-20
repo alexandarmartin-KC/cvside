@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import CVVerificationWizard from '@/components/CVVerificationWizard';
 
 export default function UploadPage() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
@@ -13,6 +14,8 @@ export default function UploadPage() {
   const [profileSaved, setProfileSaved] = useState(false);
   const [expandedJobIds, setExpandedJobIds] = useState<Set<number>>(new Set());
   const [savedJobIds, setSavedJobIds] = useState<Set<number>>(new Set());
+  const [showVerificationWizard, setShowVerificationWizard] = useState(false);
+  const [pendingCvData, setPendingCvData] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<{
     cvProfile: {
@@ -621,27 +624,16 @@ export default function UploadPage() {
 
       const data = await response.json();
       setCurrentStep(4); // Step 4: Matching jobs
-      setResult(data);
-      setStatus('Upload successful!');
-
-      // Store CV data in localStorage for persistence across navigation
+      
+      // Show verification wizard instead of directly setting result
       if (data.cvProfile) {
-        localStorage.setItem('pendingCvData', JSON.stringify({
-          cvProfile: data.cvProfile,
-          fileName: file.name,
-          cvDataUrl: data.cvDataUrl,
-          timestamp: Date.now()
-        }));
-      }
-
-      // Auto-save to database if logged in - pass data directly
-      if (isLoggedIn && data.cvProfile) {
-        console.log('User logged in, saving CV profile...');
-        await saveCvProfile(data);
-        // Clear localStorage after successful save
-        localStorage.removeItem('pendingCvData');
+        setPendingCvData(data);
+        setShowVerificationWizard(true);
+        setStatus('');
       } else {
-        console.log('Not saving CV profile yet - user not logged in');
+        // If no CV profile (fallback parser), just show results
+        setResult(data);
+        setStatus('Upload successful!');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -652,8 +644,84 @@ export default function UploadPage() {
     }
   };
 
+  // Handle verification wizard completion
+  const handleVerificationComplete = async (verifiedProfile: any) => {
+    if (!pendingCvData) return;
+    
+    // Update the result with the verified profile data
+    const verifiedData = {
+      ...pendingCvData,
+      cvProfile: {
+        ...pendingCvData.cvProfile,
+        name: verifiedProfile.name,
+        title: verifiedProfile.title,
+        contact: verifiedProfile.contact,
+        skills: verifiedProfile.skills,
+        languages: verifiedProfile.languages,
+        experience: verifiedProfile.experience,
+        education: verifiedProfile.education,
+      }
+    };
+    
+    setResult(verifiedData);
+    setShowVerificationWizard(false);
+    setPendingCvData(null);
+    setStatus('Profile verified!');
+    
+    // Store verified CV data in localStorage for persistence
+    localStorage.setItem('pendingCvData', JSON.stringify({
+      cvProfile: verifiedData.cvProfile,
+      fileName: file?.name || 'CV.pdf',
+      cvDataUrl: verifiedData.cvDataUrl,
+      timestamp: Date.now()
+    }));
+    
+    // Auto-save to database if logged in
+    if (isLoggedIn) {
+      console.log('User logged in, saving verified CV profile...');
+      await saveCvProfile(verifiedData);
+      localStorage.removeItem('pendingCvData');
+    } else {
+      console.log('Not saving CV profile yet - user not logged in');
+    }
+  };
+  
+  // Handle verification wizard cancel
+  const handleVerificationCancel = () => {
+    // Skip verification and use raw parsed data
+    if (pendingCvData) {
+      setResult(pendingCvData);
+      setStatus('Upload successful!');
+      
+      // Store CV data in localStorage
+      localStorage.setItem('pendingCvData', JSON.stringify({
+        cvProfile: pendingCvData.cvProfile,
+        fileName: file?.name || 'CV.pdf',
+        cvDataUrl: pendingCvData.cvDataUrl,
+        timestamp: Date.now()
+      }));
+      
+      // Auto-save if logged in
+      if (isLoggedIn && pendingCvData.cvProfile) {
+        saveCvProfile(pendingCvData);
+        localStorage.removeItem('pendingCvData');
+      }
+    }
+    setShowVerificationWizard(false);
+    setPendingCvData(null);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* CV Verification Wizard */}
+      {showVerificationWizard && pendingCvData?.cvProfile && (
+        <CVVerificationWizard
+          cvProfile={pendingCvData.cvProfile}
+          onComplete={handleVerificationComplete}
+          onCancel={handleVerificationCancel}
+        />
+      )}
+      
       {/* Top Navigation */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
@@ -786,10 +854,16 @@ export default function UploadPage() {
                     </div>
                   </div>
                   <button
-                    onClick={handleDropzoneClick}
+                    onClick={() => {
+                      // Reset state for new upload
+                      setResult(null);
+                      setProfileSaved(false);
+                      setCurrentStep(0);
+                      handleDropzoneClick();
+                    }}
                     className="ml-4 text-sm font-medium text-blue-600 hover:text-blue-800 focus:outline-none focus:underline"
                   >
-                    Upload new
+                    Replace CV
                   </button>
                 </div>
               </div>
@@ -1079,10 +1153,22 @@ export default function UploadPage() {
 
             {/* What We Understood From Your CV */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="px-6 py-5 border-b border-gray-100">
+              <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-800">
                   What we understood from your CV
                 </h2>
+                <button
+                  onClick={() => {
+                    setPendingCvData({ ...result });
+                    setShowVerificationWizard(true);
+                  }}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1.5 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  Edit Information
+                </button>
               </div>
               <div className="p-6 space-y-5">
                 {/* Name */}
