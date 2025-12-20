@@ -128,8 +128,15 @@ export function extractExperiencesWithPatterns(text: string): ExperienceEntry[] 
   const pattern3 = /^(.+?)\s+(?:at|hos|ved|,)\s+(.+?)\s*[\(](\d{4}\s*[-–]\s*(?:\d{4}|Present|Nu|Current))[\)]$/i;
   
   // Pattern 4: Multi-line block detection (Company on one line, Role on next, dates on next)
-  const companyIndicators = ['A/S', 'ApS', 'Group', 'Inc', 'Ltd', 'Corp', 'Ørsted', 'G4S', 'Securitas', 'ISS'];
-  const datePattern = /\d{4}\s*[-–]\s*(?:\d{4}|Present|Nu|Current)/i;
+  const companyIndicators = [
+    'A/S', 'ApS', 'Group', 'Inc', 'Ltd', 'Corp', 'Ørsted', 'G4S', 'Securitas', 'ISS',
+    'Security', 'Sikkerhed', 'Gruppe', 'Company', 'International', 'Services', 'Solutions'
+  ];
+  const datePattern = /\d{4}\s*[-–]\s*(?:\d{4}|Present|Nu|Current|Nuværende)/i;
+  
+  // Pattern 5: Danish format - mentions company in context
+  // e.g. "Sikkerhedsansvarlig for Ørsteds hovedkontor"
+  const contextPattern = /(?:hos|for|ved|at|i)\s+([A-ZÆØÅ][a-zæøå]+(?:'?s)?|[A-Z][a-zA-Z0-9&]+)/g;
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -201,6 +208,132 @@ export function extractExperiencesWithPatterns(text: string): ExperienceEntry[] 
   console.log('🔍 Pattern-based extraction found', experiences.length, 'experience entries');
   experiences.forEach((exp, idx) => {
     console.log(`   ${idx + 1}. ${exp.role} at ${exp.company} (${exp.start_date} - ${exp.end_date || 'Present'})`);
+  });
+  
+  // If no patterns matched, try intelligent company name detection
+  if (experiences.length === 0) {
+    console.log('⚠️ No standard patterns found, trying intelligent detection...');
+    experiences.push(...extractExperiencesIntelligent(text));
+  }
+  
+  return experiences;
+}
+
+/**
+ * Intelligent extraction for non-standard CV formats (e.g., Danish CVs without clear structure)
+ */
+function extractExperiencesIntelligent(text: string): ExperienceEntry[] {
+  const experiences: ExperienceEntry[] = [];
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  
+  // Known companies (extend this list based on common Danish companies)
+  const knownCompanies = [
+    'Ørsted', 'G4S', 'Securitas', 'ISS', 'Falck', 'Dansk Facility', 
+    'Nets', 'Danske Bank', 'Nordea', 'TDC', 'LEGO', 'Vestas',
+    'Maersk', 'Carlsberg', 'Novo Nordisk', 'Coloplast', 'Novozymes'
+  ];
+  
+  // Danish job title keywords
+  const jobTitleKeywords = [
+    'specialist', 'ansvarlig', 'leder', 'chef', 'koordinator', 'konsulent',
+    'manager', 'supervisor', 'officer', 'guard', 'vagt', 'medarbejder',
+    'udvikler', 'ingeniør', 'tekniker', 'analytiker', 'rådgiver'
+  ];
+  
+  // Look for company mentions with context
+  const companyPattern = /(?:hos|for|ved|at|i)\s+([A-ZÆØÅ][a-zæøå]+(?:'?s)?)/gi;
+  const datePattern = /\b(19|20)\d{2}\b/g;
+  
+  const companyMentions = new Map<string, { line: string; lineIndex: number }[]>();
+  
+  lines.forEach((line, idx) => {
+    // Check for known companies
+    knownCompanies.forEach(company => {
+      if (line.toLowerCase().includes(company.toLowerCase())) {
+        if (!companyMentions.has(company)) {
+          companyMentions.set(company, []);
+        }
+        companyMentions.get(company)!.push({ line, lineIndex: idx });
+      }
+    });
+    
+    // Check for company patterns in context
+    const matches = line.matchAll(companyPattern);
+    for (const match of matches) {
+      const possibleCompany = match[1];
+      if (possibleCompany && possibleCompany.length > 2) {
+        if (!companyMentions.has(possibleCompany)) {
+          companyMentions.set(possibleCompany, []);
+        }
+        companyMentions.get(possibleCompany)!.push({ line, lineIndex: idx });
+      }
+    }
+  });
+  
+  // Extract experiences from company mentions
+  companyMentions.forEach((mentions, company) => {
+    // Look for job title in the same line or nearby lines
+    const mainMention = mentions[0];
+    let role = '';
+    
+    // Try to extract role from the line mentioning the company
+    for (const keyword of jobTitleKeywords) {
+      if (mainMention.line.toLowerCase().includes(keyword)) {
+        // Extract the phrase containing the keyword
+        const words = mainMention.line.split(/\s+/);
+        const keywordIndex = words.findIndex(w => w.toLowerCase().includes(keyword));
+        if (keywordIndex >= 0) {
+          // Take 2-3 words around the keyword
+          const start = Math.max(0, keywordIndex - 1);
+          const end = Math.min(words.length, keywordIndex + 3);
+          role = words.slice(start, end).join(' ');
+          break;
+        }
+      }
+    }
+    
+    if (!role) {
+      // Try to find role in nearby lines
+      for (let offset = -2; offset <= 2; offset++) {
+        const nearbyIndex = mainMention.lineIndex + offset;
+        if (nearbyIndex >= 0 && nearbyIndex < lines.length) {
+          const nearbyLine = lines[nearbyIndex];
+          for (const keyword of jobTitleKeywords) {
+            if (nearbyLine.toLowerCase().includes(keyword)) {
+              role = nearbyLine;
+              break;
+            }
+          }
+          if (role) break;
+        }
+      }
+    }
+    
+    // Look for dates near the company mention
+    let startDate = '';
+    let endDate = '';
+    for (let offset = -5; offset <= 5; offset++) {
+      const nearbyIndex = mainMention.lineIndex + offset;
+      if (nearbyIndex >= 0 && nearbyIndex < lines.length) {
+        const dates = lines[nearbyIndex].match(datePattern);
+        if (dates && dates.length >= 1) {
+          startDate = dates[0];
+          endDate = dates[1] || 'Present';
+          break;
+        }
+      }
+    }
+    
+    if (role || startDate) {
+      experiences.push({
+        company: company,
+        role: role || 'Position',
+        start_date: startDate,
+        end_date: endDate || undefined,
+        confidence: 'low' as const
+      });
+      console.log(`   🔍 Intelligent detection: ${role || 'Position'} at ${company} (${startDate || '?'} - ${endDate || 'Present'})`);
+    }
   });
   
   return experiences;
