@@ -16,6 +16,7 @@ export default function UploadPage() {
   const [savedJobIds, setSavedJobIds] = useState<Set<number>>(new Set());
   const [showVerificationWizard, setShowVerificationWizard] = useState(false);
   const [pendingCvData, setPendingCvData] = useState<any>(null);
+  const [isReplacementUpload, setIsReplacementUpload] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<{
     cvProfile: {
@@ -246,6 +247,27 @@ export default function UploadPage() {
       setPreferredLocation(manualLocations[0]);
     }
   }, [manualLocations, preferredLocation]);
+
+  // Check for pending CV upload from profile page
+  useEffect(() => {
+    const pendingData = sessionStorage.getItem('pendingCvUpload');
+    if (pendingData) {
+      try {
+        const parsed = JSON.parse(pendingData);
+        console.log('Found pending CV upload from profile page:', parsed);
+        
+        // Set the CV data and show wizard
+        setPendingCvData(parsed.cvData);
+        setShowVerificationWizard(true);
+        setIsReplacementUpload(parsed.isReplacement || false);
+        
+        // Keep in sessionStorage until wizard completes or is cancelled
+      } catch (error) {
+        console.error('Failed to parse pending CV data:', error);
+        sessionStorage.removeItem('pendingCvUpload');
+      }
+    }
+  }, []);
 
   // Add skill handler
   const handleAddSkill = () => {
@@ -683,6 +705,9 @@ export default function UploadPage() {
     setPendingCvData(null);
     setStatus('Profile verified!');
     
+    // Clear the pending upload data from sessionStorage
+    sessionStorage.removeItem('pendingCvUpload');
+    
     // Store verified CV data in localStorage for persistence
     localStorage.setItem('pendingCvData', JSON.stringify({
       cvProfile: verifiedData.cvProfile,
@@ -696,6 +721,11 @@ export default function UploadPage() {
       console.log('User logged in, saving verified CV profile...');
       await saveCvProfile(verifiedData);
       localStorage.removeItem('pendingCvData');
+      
+      // If this was a replacement, redirect back to profile page
+      if (isReplacementUpload) {
+        window.location.href = '/dashboard/profile';
+      }
     } else {
       console.log('Not saving CV profile yet - user not logged in');
     }
@@ -703,6 +733,9 @@ export default function UploadPage() {
   
   // Handle verification wizard cancel
   const handleVerificationCancel = () => {
+    // Clear pending upload data from sessionStorage
+    sessionStorage.removeItem('pendingCvUpload');
+    
     // Skip verification and use raw parsed data
     if (pendingCvData) {
       setResult(pendingCvData);
@@ -720,10 +753,16 @@ export default function UploadPage() {
       if (isLoggedIn && pendingCvData.cvProfile) {
         saveCvProfile(pendingCvData);
         localStorage.removeItem('pendingCvData');
+        
+        // If this was a replacement, redirect back to profile page
+        if (isReplacementUpload) {
+          window.location.href = '/dashboard/profile';
+        }
       }
     }
     setShowVerificationWizard(false);
     setPendingCvData(null);
+    setIsReplacementUpload(false);
   };
 
   return (

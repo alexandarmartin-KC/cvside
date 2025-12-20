@@ -116,41 +116,23 @@ export function ProfileForm({ profile }: { profile: CvProfile }) {
       }
 
       const parseData = await parseResponse.json();
-      setUploadStep(3); // Step 3: Updating profile
+      setUploadStep(3); // Step 3: Redirecting to verification
 
-      // Save the CV profile
-      const saveResponse = await fetch('/api/cv/save-profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: parseData.cvProfile.name,
-          title: parseData.cvProfile.title,
-          seniority: parseData.cvProfile.seniority_level,
-          summary: parseData.cvProfile.summary,
-          skills: parseData.cvProfile.core_skills,
-          locations: parseData.cvProfile.locations,
-          preferredLocation: parseData.cvProfile.locations[0] || '',
-          workPreference: workPreference || 'ANY',
-          cvFileName: file.name,
-          cvUrl: parseData.cvDataUrl || null,
-        }),
-      });
+      // Store the parsed CV data in sessionStorage
+      sessionStorage.setItem('pendingCvUpload', JSON.stringify({
+        cvData: parseData,
+        fileName: file.name,
+        workPreference: workPreference || 'ANY',
+        isReplacement: true
+      }));
 
-      if (saveResponse.ok) {
-        setUploadStep(4); // Step 4: Done
-        // Update local state with new values
-        setName(parseData.cvProfile.name);
-        setTitle(parseData.cvProfile.title);
-        setSummary(parseData.cvProfile.summary);
-        
-        // Wait for progress indicator to show and fade
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Soft refresh - reload the page without losing session
-        window.location.reload();
-      } else {
-        throw new Error('Failed to save CV profile');
-      }
+      setUploadStep(4); // Step 4: Done
+      
+      // Wait briefly to show completion
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Redirect to upload page with wizard
+      router.push('/upload?wizard=true');
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'An error occurred');
       setUploadStep(0);
@@ -306,7 +288,7 @@ export function ProfileForm({ profile }: { profile: CvProfile }) {
               {/* Connector Line */}
               <div className={`h-0.5 flex-1 mx-2 transition-colors ${uploadStep >= 3 ? 'bg-green-300' : 'bg-gray-200'}`} />
 
-              {/* Step 3: Updating */}
+              {/* Step 3: Redirecting */}
               <div className="flex flex-col items-center flex-1">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-colors ${
                   uploadStep > 3 ? 'bg-green-100 text-green-600' : uploadStep === 3 ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'
@@ -325,7 +307,7 @@ export function ProfileForm({ profile }: { profile: CvProfile }) {
                   )}
                 </div>
                 <span className={`text-xs text-center ${uploadStep >= 3 ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>
-                  Updating
+                  Redirecting
                 </span>
               </div>
 
