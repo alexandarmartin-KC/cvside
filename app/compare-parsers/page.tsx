@@ -116,6 +116,15 @@ export default function CompareMethodsPage() {
                       )}
                     </div>
                   ))}
+                  
+                  <details className="mt-4">
+                    <summary className="cursor-pointer text-sm font-semibold text-blue-600 hover:text-blue-800">
+                      📋 View Full JSON
+                    </summary>
+                    <pre className="mt-2 bg-gray-900 text-green-400 p-4 rounded text-xs overflow-auto max-h-96">
+                      {JSON.stringify(results.assistants, null, 2)}
+                    </pre>
+                  </details>
                 </div>
               ) : (
                 <p className="text-gray-400">No result yet</p>
@@ -155,6 +164,15 @@ export default function CompareMethodsPage() {
                       )}
                     </div>
                   ))}
+                  
+                  <details className="mt-4">
+                    <summary className="cursor-pointer text-sm font-semibold text-green-600 hover:text-green-800">
+                      📋 View Full JSON
+                    </summary>
+                    <pre className="mt-2 bg-gray-900 text-green-400 p-4 rounded text-xs overflow-auto max-h-96">
+                      {JSON.stringify(results.direct, null, 2)}
+                    </pre>
+                  </details>
                 </div>
               ) : (
                 <p className="text-gray-400">No result yet</p>
