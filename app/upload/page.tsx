@@ -18,9 +18,18 @@ export default function UploadPage() {
     cvProfile: {
       name: string;
       title: string;
-      seniority_level: string;
-      core_skills: string[];
-      locations: string[];
+      // Support both old and new format
+      seniority_level?: string;
+      seniority?: string;
+      core_skills?: string[];
+      skills?: string[];
+      locations?: string[];
+      contact?: {
+        email?: string | null;
+        phone?: string | null;
+        location?: string | null;
+        linkedin?: string | null;
+      };
       summary: string;
       experience?: Array<{
         company: string;
@@ -1096,7 +1105,7 @@ export default function UploadPage() {
                 <div className="pt-5 border-t border-gray-100">
                   <p className="text-sm font-medium text-gray-600 mb-3 uppercase tracking-wide">Skills</p>
                   <div className="flex flex-wrap gap-2">
-                    {result.cvProfile.core_skills.map((skill, idx) => (
+                    {(result.cvProfile.skills || result.cvProfile.core_skills || []).map((skill, idx) => (
                       <span
                         key={idx}
                         className="inline-flex items-center px-3 py-1.5 bg-gray-50 text-gray-700 text-sm font-medium rounded-md border border-gray-200"
