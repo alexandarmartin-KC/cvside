@@ -82,6 +82,9 @@ async function analyzeCV(cvText: string) {
   
   console.log('🤖 OpenAI API Key present:', apiKey.substring(0, 7) + '...' + apiKey.substring(apiKey.length - 4));
   console.log('🤖 CV text length:', cvText.length, 'characters');
+  console.log('🤖 First 800 chars of CV text:');
+  console.log(cvText.substring(0, 800));
+  console.log('...');
   
   const openai = new OpenAI({
     apiKey: apiKey,
@@ -162,6 +165,74 @@ SKILLS & LANGUAGES RULES:
 - Otherwise, just the language name as a string
 
 -----------------------------------
+EXPERIENCE EXTRACTION RULES (CRITICAL):
+-----------------------------------
+⚠️ MOST IMPORTANT: Extract ALL employment history, even without explicit section headers
+
+PATTERNS TO DETECT EMPLOYMENT:
+1. **Company name followed by dates** (most common pattern):
+   - "Ørsted" followed by "2020 - Present" or "Nov 2020 - Present"
+   - "G4S Security" followed by "2018 - 2020"
+   - "Securitas" followed by "Jan 2015 - Dec 2018"
+
+2. **Job title + Company + Dates** pattern:
+   - "Security Specialist | Ørsted | 2020 - Present"
+   - "Security Officer, G4S Security, 2018-2020"
+
+3. **Timeline format** (dates on left, company/role on right):
+   - "2020 - Present    Security Specialist, Ørsted"
+   - "2018 - 2020      Security Officer at G4S"
+
+4. **Reverse chronological listing**:
+   - Most recent job first, older jobs follow
+   - Even without headers, this pattern indicates work history
+
+EXTRACTION STRATEGY:
+- Scan the ENTIRE document for company names + date ranges
+- A date range (e.g., "2020 - Present", "Jan 2018 - Dec 2020") near a company name = LIKELY employment
+- Look for patterns like: organization name, role/title, and time period grouped together
+- Include ALL entries that match this pattern, even if there's NO "Experience" or "Work History" header
+- If you find 3+ such patterns, they are almost certainly work experience entries
+- Extract them even if scattered throughout the document
+
+GUIDELINES:
+- Collapse related lines into a single experience entry
+- If uncertain about grouping, still extract but mark date_confidence as "low"
+- Always include source_snippet showing the original text
+- DO NOT skip any potential employment entries
+
+-----------------------------------
+EDUCATION EXTRACTION RULES (CRITICAL):
+-----------------------------------
+⚠️ EXTRACT ALL education entries, even without explicit section headers
+
+PATTERNS TO DETECT EDUCATION:
+1. **University/School name + Degree + Dates**:
+   - "Copenhagen Business School | Bachelor in Business Administration | 2015 - 2018"
+   - "Technical University of Denmark, MSc in Computer Science, 2018-2020"
+
+2. **Degree followed by institution**:
+   - "Bachelor of Science in Engineering" followed by "DTU" or "Technical University"
+   - "Master's Degree" followed by university name and dates
+
+3. **Institution + Field + Dates**:
+   - "University of Copenhagen, Computer Science, 2015-2019"
+
+EXTRACTION STRATEGY:
+- Scan for educational institution names (University, College, School, Academy, etc.)
+- Look for degree types (Bachelor, Master, PhD, Diploma, Certificate, etc.)
+- Look for fields of study (Engineering, Business, Computer Science, etc.)
+- Date ranges near education terms indicate study periods
+- Extract ALL entries that match education patterns
+- Include certifications and courses if they have institution + dates
+
+GUIDELINES:
+- Extract even if no "Education" header exists
+- Include all degrees, diplomas, certificates found
+- If dates are unclear, set to null but still extract the entry
+- Include source_snippet for verification
+
+-----------------------------------
 DATE RULES:
 -----------------------------------
 - Only extract dates exactly as written
@@ -169,18 +240,6 @@ DATE RULES:
 - If date does not confidently belong to a job → start & end = null, confidence low
 - Preserve original ordering and formatting
 - Prefer to leave ambiguous date associations unresolved
-
------------------------------------
-EXPERIENCE RULES:
------------------------------------
-- CRITICAL: Extract ALL work experience entries from the CV
-- A job/experience entry is any past or current employment
-- Collapse lines that clearly belong to a job into a single experience object
-- A job is defined by at least a company OR a role
-- Bullets may follow without a header; include them if they appear plausibly linked
-- If unsure about grouping, assign to job but mark date_confidence low
-- Always include a source_snippet showing the raw lines used
-- DO NOT skip experiences - include everything found in the CV
 
 -----------------------------------
 OUTPUT FORMAT (STRICT)
@@ -244,9 +303,30 @@ STRICT INSTRUCTIONS
 - DO NOT guess if date/title/company association is weak → mark low confidence and preserve snippet
 - If a section does not appear in the source, return an empty array/list
 
+-----------------------------------
+EXAMPLES OF WHAT TO EXTRACT:
+-----------------------------------
+
+Example 1 - Experience without header:
+CV Text: "Ørsted, Copenhagen | 2020 - Present | Security Specialist"
+Extract: {"company": "Ørsted", "role": "Security Specialist", "location": "Copenhagen", "start_date": "2020", "end_date": "Present"}
+
+Example 2 - Multiple jobs in sequence:
+CV Text: 
+"2020 - Present: Security Specialist at Ørsted
+2018 - 2020: Security Officer, G4S Security  
+2015 - 2018: Guard, Securitas"
+Extract ALL THREE as separate experience entries
+
+Example 3 - Education without header:
+CV Text: "Technical University of Denmark | BSc Computer Science | 2015-2019"
+Extract: {"institution": "Technical University of Denmark", "degree": "BSc", "field": "Computer Science", "start_date": "2015", "end_date": "2019"}
+
+⚠️ CRITICAL: Even if the CV has no "Experience" or "Education" headers, you MUST scan the entire document for these patterns and extract them!
+
 YOUR OUTPUT WILL BE SHOWN IN A WIZARD WHERE USERS CONFIRM OR CORRECT:
 - name
-- job titles + companies
+- job titles + companies  
 - dates
 - skills
 - languages
@@ -281,8 +361,25 @@ This means conservative uncertainty is acceptable and expected.`;
   console.log('   Name:', parsed.name, `(confidence: ${parsed.name_confidence || 'unknown'})`);
   console.log('   Title:', parsed.title);
   console.log('   Skills count:', parsed.skills?.length || 0);
+  console.log('   Languages count:', parsed.languages?.length || 0);
   console.log('   Experience entries:', parsed.experience?.length || 0);
+  if (parsed.experience && parsed.experience.length > 0) {
+    console.log('   📋 Experiences found:');
+    parsed.experience.forEach((exp: any, idx: number) => {
+      console.log(`      ${idx + 1}. ${exp.role || 'No role'} at ${exp.company || 'No company'} (${exp.start_date || '?'} - ${exp.end_date || '?'})`);
+    });
+  } else {
+    console.warn('   ⚠️ WARNING: No experience entries extracted!');
+  }
   console.log('   Education entries:', parsed.education?.length || 0);
+  if (parsed.education && parsed.education.length > 0) {
+    console.log('   🎓 Education found:');
+    parsed.education.forEach((edu: any, idx: number) => {
+      console.log(`      ${idx + 1}. ${edu.degree || 'No degree'} at ${edu.institution || 'No institution'} (${edu.start_date || '?'} - ${edu.end_date || '?'})`);
+    });
+  } else {
+    console.warn('   ⚠️ WARNING: No education entries extracted!');
+  }
 
   return parsed;
   
@@ -315,6 +412,16 @@ This means conservative uncertainty is acceptable and expected.`;
       const parsed = JSON.parse(fallbackContent);
       console.log('✅ Successfully parsed with gpt-3.5-turbo');
       console.log('   Name:', parsed.name, `(confidence: ${parsed.name_confidence || 'unknown'})`);
+      console.log('   Experience entries:', parsed.experience?.length || 0);
+      if (parsed.experience && parsed.experience.length > 0) {
+        console.log('   📋 Experiences found:');
+        parsed.experience.forEach((exp: any, idx: number) => {
+          console.log(`      ${idx + 1}. ${exp.role || 'No role'} at ${exp.company || 'No company'}`);
+        });
+      } else {
+        console.warn('   ⚠️ WARNING: No experience entries extracted!');
+      }
+      console.log('   Education entries:', parsed.education?.length || 0);
       
       return parsed;
     }
