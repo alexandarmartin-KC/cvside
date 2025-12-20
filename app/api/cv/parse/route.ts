@@ -616,25 +616,19 @@ export async function POST(request: NextRequest) {
     
     if (process.env.OPENAI_API_KEY) {
       try {
-        console.log('🚀 Using GPT-4o with native PDF reading (like ChatGPT)...');
+        console.log('🚀 Using GPT-4o to parse CV...');
+        console.log('📄 Extracted text length:', extractedText.length, 'characters');
+        console.log('📄 First 500 chars of text:', extractedText.substring(0, 500));
         
-        // Try native PDF upload first (best quality - exactly like ChatGPT)
-        try {
-          cvProfile = await parseCVWithDirectUpload(
-            buffer, 
-            process.env.OPENAI_API_KEY,
-            file.name
-          );
-          console.log('✅ Successfully parsed CV with native PDF reading');
-        } catch (uploadError: any) {
-          console.log('⚠️ Native PDF parsing failed:', uploadError.message);
-          console.log('   Falling back to text extraction + GPT-4o...');
-          
-          // Fallback to text-based parsing
-          console.log('📄 Extracted text length:', extractedText.length, 'characters');
-          cvProfile = await parseCVWithText(extractedText, process.env.OPENAI_API_KEY);
-          console.log('✅ Successfully parsed CV with GPT-4o (text mode)');
-        }
+        // Use GPT-4o with comprehensive prompt on extracted text
+        // (Assistants API disabled temporarily - too slow/complex)
+        cvProfile = await parseCVWithText(extractedText, process.env.OPENAI_API_KEY);
+        console.log('✅ Successfully parsed CV with GPT-4o');
+        console.log('📊 Extracted data summary:');
+        console.log('   - Name:', cvProfile.name);
+        console.log('   - Experience:', cvProfile.experience?.length || 0, 'entries');
+        console.log('   - Education:', cvProfile.education?.length || 0, 'entries');
+        console.log('   - Skills:', cvProfile.skills?.length || 0);
         
         matches = await rankJobs(cvProfile);
       } catch (error: any) {

@@ -460,21 +460,59 @@ export async function parseCVWithText(
 
   const systemPrompt = `You are an expert CV/Resume parser with deep understanding of professional documents.
 
-Your task: Extract ALL information from this CV comprehensively and accurately.
+CRITICAL MISSION: Extract EVERY SINGLE piece of information from this CV. Be EXTREMELY thorough and comprehensive.
 
-CRITICAL RULES:
-1. Extract EVERYTHING you see - be thorough
-2. Do NOT skip any work experience or education entries
-3. Do NOT invent information that isn't present
-4. If formatting is messy, use context to understand structure
-5. Return complete, detailed information
+YOU MUST EXTRACT:
+
+1. **Personal Information** - Find the person's details (usually at top)
+2. **ALL Work Experience** - Every single job, internship, or role
+3. **ALL Education** - Every degree, certification, course
+4. **ALL Skills** - Every technical skill, tool, framework, language
+5. **ALL Spoken Languages** - Every language they speak/write
+
+CRITICAL RULES FOR EXPERIENCE:
+- Extract EVERY job - do NOT skip any
+- For EACH job, extract ALL bullet points separately
+- Each responsibility should be a separate item in the bullets array
+- If you see 5 bullet points under a job, extract all 5
+- If you see 10 bullet points, extract all 10
+- DO NOT summarize or combine bullet points
+- DO NOT skip details
+
+EXAMPLE - If you see this in the CV:
+```
+Software Engineer | TechCorp | 2020-2023
+• Led development of microservices architecture using Kubernetes
+• Mentored team of 5 junior developers
+• Implemented CI/CD pipelines reducing deployment time by 50%
+• Collaborated with product team on feature planning
+• Wrote technical documentation
+```
+
+You MUST return:
+```json
+{
+  "company": "TechCorp",
+  "role": "Software Engineer",
+  "start_date": "2020",
+  "end_date": "2023",
+  "bullets": [
+    "Led development of microservices architecture using Kubernetes",
+    "Mentored team of 5 junior developers",
+    "Implemented CI/CD pipelines reducing deployment time by 50%",
+    "Collaborated with product team on feature planning",
+    "Wrote technical documentation"
+  ],
+  "confidence": "high"
+}
+```
 
 OUTPUT FORMAT (JSON):
 {
   "name": "Full Name",
   "name_confidence": "high|medium|low",
-  "title": "Professional Title or Role",
-  "summary": "Professional summary if present",
+  "title": "Professional Title or Current Role",
+  "summary": "Professional summary if present in CV",
   "contact": {
     "email": "email@example.com",
     "phone": "+1234567890",
@@ -485,13 +523,14 @@ OUTPUT FORMAT (JSON):
     {
       "company": "Company Name",
       "role": "Job Title",
-      "location": "City, Country",
+      "location": "City, Country (if shown)",
       "start_date": "YYYY-MM or YYYY",
       "end_date": "YYYY-MM or YYYY or Present",
       "bullets": [
-        "First responsibility or achievement",
-        "Second responsibility or achievement",
-        "Third responsibility or achievement"
+        "First bullet point exactly as shown",
+        "Second bullet point exactly as shown",
+        "Third bullet point exactly as shown",
+        "... continue for ALL bullets"
       ],
       "confidence": "high"
     }
@@ -499,70 +538,60 @@ OUTPUT FORMAT (JSON):
   "education": [
     {
       "institution": "University Name",
-      "degree": "Degree Type (Bachelor, Master, PhD, etc.)",
+      "degree": "Bachelor of Science / Master / PhD / etc",
       "field": "Field of Study",
-      "location": "City, Country",
+      "location": "City, Country (if shown)",
       "start_date": "YYYY",
       "end_date": "YYYY",
       "confidence": "high"
     }
   ],
-  "skills": ["Skill1", "Skill2", "Skill3"],
-  "languages": ["English (Native)", "Spanish (Fluent)"],
+  "skills": ["JavaScript", "Python", "React", "AWS", "Docker"],
+  "languages": ["English (Native)", "Spanish (Fluent)", "German (Basic)"],
   "seniority_level": "Junior|Mid|Senior|Lead|Principal"
 }
 
 EXTRACTION GUIDELINES:
 
-**Personal Info:**
-- Name: Usually at the top, largest text
-- Title: Often right after name (e.g., "Senior Developer", "Product Manager")
-- Contact: Email, phone, location usually in header
-- LinkedIn: Look for linkedin.com URLs
-
-**Experience:**
-- Look for: "Experience", "Work History", "Employment", "Professional Experience"
-- Common patterns: Company | Role | Dates | Location
-- Extract ALL jobs, even if formatting is inconsistent
-- Dates format: Try to standardize to YYYY-MM or YYYY
-- Bullets: Extract ALL bullet points, responsibilities, and achievements as separate array items
-- IMPORTANT: Return bullets as an array, not a single description string
-- Each bullet should be a separate achievement, responsibility, or project
-- If you see responsibilities, achievements, or bullet points - include them ALL
+**Experience (MOST IMPORTANT):**
+- Look for sections: "Experience", "Work History", "Employment", "Professional Experience"
+- Extract EVERY job listed
+- For each job, extract ALL bullet points as separate array items
+- Count the bullets - if CV shows 8 bullets, you must extract 8 bullets
+- DO NOT combine multiple bullets into one
+- DO NOT skip bullets
+- Each achievement, responsibility, or project = separate bullet
+- Include metrics, numbers, technologies mentioned in bullets
 
 **Education:**
-- Look for: "Education", "Academic Background", "Qualifications"
-- Extract: Institution, Degree type, Field, Dates
-- Common degrees: Bachelor, Master, PhD, Diploma, Certificate
+- Look for: "Education", "Academic Background", "Qualifications", "Certifications"
+- Extract ALL degrees and certifications
+- Include institution name, degree type, field of study, dates
 
 **Skills:**
-- Look for: "Skills", "Technical Skills", "Core Competencies", "Technologies"
-- Extract: Programming languages, frameworks, tools, methodologies
-- DO NOT include spoken languages (those go in "languages" field)
-- Examples: JavaScript, Python, React, AWS, Agile, Docker
+- Look for: "Skills", "Technical Skills", "Technologies", "Core Competencies"
+- Extract ALL skills listed
+- Include: Programming languages, frameworks, tools, methodologies
+- DO NOT include spoken languages here (those go in "languages")
 
 **Languages (Spoken):**
 - Look for: "Languages", "Language Skills"
-- Extract spoken/written languages only
-- Include proficiency if mentioned: "English (Native)", "French (Intermediate)"
-- Examples: English, Spanish, German, Mandarin, Danish
+- Extract ALL spoken/written languages
+- Include proficiency level if mentioned
+- Examples: "English (Native)", "French (Fluent)", "Spanish (Intermediate)"
 
-**Seniority Level:**
-- Determine from job titles and experience years
-- Junior: 0-2 years, entry-level roles
-- Mid: 3-5 years, standard roles
-- Senior: 6+ years, senior titles
-- Lead/Principal: Leadership roles, 10+ years
+**Handling Messy Text:**
+- The text may be poorly formatted due to PDF extraction
+- Use context to identify sections even if headers are unclear
+- Look for patterns: dates, company names, job titles
+- Be smart about identifying what belongs together
 
-IMPORTANT NOTES:
-- The text might be messy due to PDF extraction
-- Use context clues to identify sections
-- Dates might be separated from job titles
-- Multi-column layouts get merged together
-- Look for common section headers even if formatted oddly
-- Extract company names even if formatting is inconsistent
+**Confidence Levels:**
+- "high": Information is clearly stated
+- "medium": Information inferred from context
+- "low": Information is unclear or ambiguous
 
-Return ONLY valid JSON, no additional text or markdown formatting.`;
+Return ONLY valid JSON, no markdown formatting, no additional text.`;
 
   try {
     const completion = await openai.chat.completions.create({
@@ -592,6 +621,17 @@ Return ONLY valid JSON, no additional text or markdown formatting.`;
     console.log('   Name:', parsed.name || 'Not found');
     console.log('   Title:', parsed.title || 'Not found');
     console.log('   Experience entries:', parsed.experience?.length || 0);
+    if (parsed.experience && parsed.experience.length > 0) {
+      parsed.experience.forEach((exp: any, idx: number) => {
+        console.log(`   Experience ${idx + 1}: ${exp.company} - ${exp.role}`);
+        console.log(`      Bullets: ${exp.bullets?.length || 0} items`);
+        if (exp.bullets && exp.bullets.length > 0) {
+          exp.bullets.slice(0, 2).forEach((bullet: string, bidx: number) => {
+            console.log(`        ${bidx + 1}. ${bullet.substring(0, 60)}...`);
+          });
+        }
+      });
+    }
     console.log('   Education entries:', parsed.education?.length || 0);
     console.log('   Skills:', parsed.skills?.length || 0);
     console.log('   Languages:', parsed.languages?.length || 0);
