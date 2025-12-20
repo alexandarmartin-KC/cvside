@@ -504,7 +504,7 @@ You MUST return this JSON:
   ],
   "confidence": "high"
 }
-```
+---
 
 OUTPUT FORMAT (JSON):
 {
