@@ -89,12 +89,17 @@ async function analyzeCV(cvText: string) {
 
   console.log('🤖 Sending CV to OpenAI for intelligent parsing...');
 
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4',
-    messages: [
-      {
-        role: 'system',
-        content: `You are a CV parsing engine. Your job is to read raw CV text and output clean structured JSON. The CV can have any layout or design.
+  // Try GPT-4 first, fall back to GPT-3.5-turbo if not available
+  const model = process.env.OPENAI_MODEL || 'gpt-4';
+  console.log('🤖 Using model:', model);
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: model,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a CV parsing engine. Your job is to read raw CV text and output clean structured JSON. The CV can have any layout or design.
 
 The input is the FULL TEXT of a CV extracted from a PDF (line breaks preserved).
 Sometimes the PDF extraction splits lines in strange ways, or moves dates onto separate lines from company names. Do your best to associate them correctly, but **never invent information**.
@@ -188,6 +193,112 @@ General rules:
   console.log('   Education entries:', parsed.education?.length || 0);
 
   return parsed;
+  
+  } catch (error: any) {
+    // If GPT-4 is not available (404 or 400), try GPT-3.5-turbo
+    if ((error?.status === 404 || error?.status === 400) && model === 'gpt-4') {
+      console.warn('⚠️ GPT-4 not available, retrying with gpt-3.5-turbo...');
+      
+      const fallbackCompletion = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a CV parsing engine. Your job is to read raw CV text and output clean structured JSON. The CV can have any layout or design.
+
+The input is the FULL TEXT of a CV extracted from a PDF (line breaks preserved).
+Sometimes the PDF extraction splits lines in strange ways, or moves dates onto separate lines from company names. Do your best to associate them correctly, but **never invent information**.
+
+Your goals:
+1. Identify the candidate's name.
+2. Extract core profile info.
+3. Extract work experience with correct date ranges, as reliably as possible.
+4. Extract education.
+5. DO NOT hallucinate missing data.
+
+IMPORTANT RULES ABOUT DATES:
+- Only use dates that literally appear in the CV text.
+- Keep the original date string format (e.g. "Nov 2020", "11/2020", "November 2020").
+- If you are NOT certain which dates belong to which job, set "start_date" and "end_date" to null for that job and include the raw lines in "source_snippet" so a human can fix it.
+- Do not invent months or years that are not explicitly written.
+- Do not reorder years (e.g. 2020–2022 must stay that way, never 2022–2020).
+
+IMPORTANT RULES ABOUT NAME:
+- The candidate's full name is usually in the very top lines.
+- Ignore headers like "CV", "Curriculum Vitae", "Resume".
+- If multiple names appear, choose the one that looks like a personal name, especially near contact info (email, phone).
+- If you are unsure, pick your best guess and keep "name_confidence": "low".
+
+OUTPUT FORMAT:
+Return a single JSON object in this shape:
+
+{
+  "name": "string",
+  "name_confidence": "high" | "medium" | "low",
+  "title": "string or null",
+  "summary": "string or null",
+  "contact": {
+    "email": "string or null",
+    "phone": "string or null",
+    "location": "string or null",
+    "linkedin": "string or null"
+  },
+  "skills": ["string", ...],
+  "experience": [
+    {
+      "company": "string",
+      "role": "string or null",
+      "location": "string or null",
+      "start_date": "string or null",
+      "end_date": "string or null",
+      "date_confidence": "high" | "medium" | "low",
+      "bullets": ["string", ...],
+      "source_snippet": "short excerpt of the original lines for this job"
+    }
+  ],
+  "education": [
+    {
+      "institution": "string",
+      "degree": "string or null",
+      "field": "string or null",
+      "start_date": "string or null",
+      "end_date": "string or null",
+      "details": ["string", ...],
+      "source_snippet": "short excerpt of the original lines for this education"
+    }
+  ],
+  "raw_notes": "optional comments if something was ambiguous"
+}
+
+General rules:
+- Do not include any text outside the JSON.
+- If some sections are missing in the CV, return empty arrays for them.
+- Prefer being conservative (null dates + low confidence) over guessing wrong.`
+          },
+          {
+            role: 'user',
+            content: `Parse this CV/Resume and extract all information:\n\n${cvText.substring(0, 12000)}`
+          }
+        ],
+        temperature: 0.1,
+        response_format: { type: 'json_object' }
+      });
+      
+      const fallbackContent = fallbackCompletion.choices[0]?.message?.content;
+      if (!fallbackContent) {
+        throw new Error('No response from OpenAI (fallback model)');
+      }
+      
+      const parsed = JSON.parse(fallbackContent);
+      console.log('✅ Successfully parsed with gpt-3.5-turbo');
+      console.log('   Name:', parsed.name, `(confidence: ${parsed.name_confidence || 'unknown'})`);
+      
+      return parsed;
+    }
+    
+    // Re-throw if not a model availability issue
+    throw error;
+  }
 }
 
 async function rankJobs(cvProfile: any) {
@@ -288,7 +399,20 @@ export async function POST(request: NextRequest) {
         matches = await rankJobs(cvProfile);
         console.log('Successfully parsed CV with OpenAI');
       } catch (error: any) {
-        if (error?.status === 429 || error?.message?.includes('429')) {
+        if (error?.status === 400) {
+          console.error('❌ OpenAI Bad Request (400) - Invalid request format');
+          console.error('   Error message:', error?.message);
+          console.error('   Error type:', error?.type);
+          console.error('   Error code:', error?.code);
+          if (error?.error) {
+            console.error('   Error details:', JSON.stringify(error.error, null, 2));
+          }
+          console.error('   Full error object:', JSON.stringify(error, null, 2));
+          console.error('\nPossible causes:');
+          console.error('   - Invalid model name (try gpt-3.5-turbo if gpt-4 not available)');
+          console.error('   - Request payload too large');
+          console.error('   - Invalid parameters in request');
+        } else if (error?.status === 429 || error?.message?.includes('429')) {
           console.error('⚠️ OpenAI rate limit (429). Extracting basic info from CV text...');
         } else if (error?.status === 401 || error?.message?.includes('401') || error?.message?.includes('Incorrect API key')) {
           console.error('❌ OpenAI API key invalid or missing. Check OPENAI_API_KEY environment variable.');

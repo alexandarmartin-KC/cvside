@@ -69,7 +69,19 @@ async function testOpenAIConnection() {
       console.error('The model "gpt-4" may not be available for your account.');
       console.error('\nTo fix:');
       console.error('1. Try using "gpt-3.5-turbo" instead');
-      console.error('2. Check your model access at https://platform.openai.com/account/limits');
+      console.error('2. Set environment variable: OPENAI_MODEL=gpt-3.5-turbo');
+      console.error('3. Check your model access at https://platform.openai.com/account/limits');
+    } else if (error?.status === 400) {
+      console.error('Error: Bad Request (400)');
+      console.error('The request to OpenAI was invalid.');
+      console.error('\nDetails:', error?.message);
+      if (error?.error) {
+        console.error('Error object:', JSON.stringify(error.error, null, 2));
+      }
+      console.error('\nPossible causes:');
+      console.error('1. Invalid model name - try OPENAI_MODEL=gpt-3.5-turbo');
+      console.error('2. Request format is incorrect');
+      console.error('3. Model access restrictions on your account');
     } else if (error?.code === 'ENOTFOUND' || error?.code === 'ETIMEDOUT') {
       console.error('Error: Network connection failed');
       console.error('Could not connect to OpenAI servers.');

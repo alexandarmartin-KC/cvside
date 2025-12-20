@@ -27,6 +27,10 @@ Edit `.env.local` and replace the placeholder:
 
 ```env
 OPENAI_API_KEY=sk-your-actual-key-here
+
+# Optional: Specify model (defaults to gpt-4)
+# Use gpt-3.5-turbo if you don't have GPT-4 access
+OPENAI_MODEL=gpt-4
 ```
 
 ### Step 4: Test the Connection
@@ -112,14 +116,28 @@ The CV parser will now use OpenAI for intelligent parsing!
 **Cause**: GPT-4 access not available for your account
 
 **Fix**: 
-In `app/api/cv/parse/route.ts`, change:
-```typescript
-model: 'gpt-4',
+Add to your `.env.local`:
+```env
+OPENAI_MODEL=gpt-3.5-turbo
 ```
-to:
-```typescript
-model: 'gpt-3.5-turbo',
+
+Or update the code to automatically fall back (already implemented in latest version).
+
+### Issue: 400 Bad Request
+**Cause**: Invalid request format or model not available
+
+**Common fixes:**
+1. **Model not available**: Set `OPENAI_MODEL=gpt-3.5-turbo`
+2. **Request too large**: The CV text might be too long
+3. **Invalid parameters**: Check the system prompt format
+
+**Debug steps:**
+```bash
+# Check the logs for detailed error message
+# Look for "Error details:" in the output
 ```
+
+The latest version automatically falls back to gpt-3.5-turbo if gpt-4 fails.
 
 ---
 
