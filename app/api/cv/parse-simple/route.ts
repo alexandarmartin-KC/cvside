@@ -52,32 +52,58 @@ export async function POST(request: NextRequest) {
     console.log('🤖 Creating assistant...');
     const assistant = await openai.beta.assistants.create({
       name: 'CV Extractor',
-      instructions: `Extract ALL information from the CV. Return a JSON object with:
+      instructions: `You are extracting information from a CV/Resume. Extract EVERYTHING you see.
+
+CRITICAL RULES FOR EXPERIENCE:
+1. Extract EVERY single job/position listed
+2. For EACH job, extract EVERY bullet point/responsibility/achievement listed under it
+3. Even if a job has only 1-2 bullets, extract them
+4. Even if a job seems to have no bullets but has a description, extract that as bullets
+5. DO NOT leave any job with empty bullets array unless there truly is no text under that job
+6. Look for: bullet points (•, -, *), numbered lists, or paragraph descriptions
+7. If job has a paragraph description instead of bullets, split it into separate bullet points
+
+EXAMPLE - If the CV shows:
+---
+Vagtsupervisor | Ørsted | 2021-2022
+• Supervised security team
+• Managed daily operations
+---
+You MUST return:
+{
+  "company": "Ørsted",
+  "role": "Vagtsupervisor", 
+  "bullets": ["Supervised security team", "Managed daily operations"]
+}
+
+If NO bullets visible under a job, look for ANY text/description and extract it.
+
+Return ONLY this JSON structure:
 {
   "name": "full name",
   "email": "email",
-  "phone": "phone",
-  "location": "location",
-  "title": "professional title",
-  "summary": "summary if any",
+  "phone": "phone number",
+  "location": "full address/location",
+  "title": "current job title/professional headline",
+  "summary": "professional summary if present",
   "experience": [
     {
       "company": "company name",
       "role": "job title",
-      "start_date": "start date",
-      "end_date": "end date",
-      "location": "location",
-      "bullets": ["bullet 1", "bullet 2", "ALL bullets - do not skip any"]
+      "start_date": "start date (e.g. 'November 2022', '2022', etc.)",
+      "end_date": "end date or 'Nuværende' or 'Present'",
+      "location": "job location if shown",
+      "bullets": ["responsibility 1", "responsibility 2", "achievement 3", "ALL bullets/descriptions"]
     }
   ],
   "education": [
-    {"institution": "name", "degree": "degree", "field": "field", "start_date": "start", "end_date": "end"}
+    {"institution": "school name", "degree": "degree name", "field": "field of study", "start_date": "year", "end_date": "year"}
   ],
-  "skills": ["skill1", "skill2", "all skills"],
-  "languages": ["language1", "language2"]
+  "skills": ["skill1", "skill2", "all technical skills"],
+  "languages": ["language with proficiency level"]
 }
 
-CRITICAL: Extract EVERY bullet point under each job. If you see 10 bullets, extract all 10.`,
+Be thorough. Extract everything you see in the document.`,
       model: 'gpt-4o',
       tools: [{ type: 'file_search' }]
     });

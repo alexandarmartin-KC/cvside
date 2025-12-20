@@ -70,25 +70,33 @@ export async function parseCVWithAssistants(pdfBuffer: Buffer, filename: string 
     console.log('🔧 Creating Assistant...');
     const assistant = await openai.beta.assistants.create({
       name: 'CV Parser Expert',
-      instructions: `You are an expert CV/Resume parser. Your task is to extract ALL information from the uploaded CV PDF.
+      instructions: `You are an expert CV/Resume parser. Extract ALL information from the uploaded CV PDF.
 
-CRITICAL RULES:
-1. Extract EVERY job in the experience section
-2. For EACH job, extract ALL bullet points separately - do not summarize or combine
-3. If you see 8 bullets, extract all 8
-4. Extract all education, skills, and contact information
-5. Be thorough and comprehensive
+CRITICAL RULES FOR EXPERIENCE:
+1. Extract EVERY single job/position listed in the CV
+2. For EACH job, extract EVERY bullet point, responsibility, or achievement listed under it
+3. If a job has 1 bullet, extract 1. If it has 10 bullets, extract all 10
+4. DO NOT leave any job with empty bullets array unless there is truly no text under that job
+5. Look for: bullet points (•, -, *, numbers), or paragraph descriptions
+6. If a job has paragraph text instead of bullets, split it into separate points
+7. Even short descriptions should be extracted as bullets
+
+CRITICAL RULES FOR OTHER DATA:
+- Extract full address/location including street, postal code, city
+- Extract all education entries with complete information
+- Extract ALL technical skills mentioned
+- Extract language proficiency levels exactly as shown
 
 Return ONLY a JSON object with this exact structure:
 {
   "name": "Full Name",
   "name_confidence": "high",
-  "title": "Professional Title",
-  "summary": "Professional summary if any",
+  "title": "Professional Title or Current Position",
+  "summary": "Professional summary if present in CV",
   "contact": {
     "email": "email@example.com",
     "phone": "+1234567890",
-    "location": "City, Country",
+    "location": "Full address as shown in CV",
     "linkedin": "https://linkedin.com/in/username"
   },
   "experience": [
@@ -96,24 +104,24 @@ Return ONLY a JSON object with this exact structure:
       "company": "Company Name",
       "role": "Job Title",
       "location": "City, Country",
-      "start_date": "YYYY-MM or YYYY",
-      "end_date": "YYYY-MM or YYYY or Present",
+      "start_date": "Month Year or Year",
+      "end_date": "Month Year or Year or Present or Nuværende",
       "bullets": [
         "First responsibility exactly as written",
         "Second responsibility exactly as written",
-        "All other responsibilities..."
+        "Continue for ALL bullets/descriptions under this job"
       ],
       "confidence": "high"
     }
   ],
   "education": [
     {
-      "institution": "University Name",
+      "institution": "Institution Name",
       "degree": "Degree Type",
       "field": "Field of Study",
-      "location": "City, Country",
-      "start_date": "YYYY",
-      "end_date": "YYYY",
+      "location": "Location if shown",
+      "start_date": "Year",
+      "end_date": "Year",
       "confidence": "high"
     }
   ],
