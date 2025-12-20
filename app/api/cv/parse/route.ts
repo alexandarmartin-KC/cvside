@@ -74,8 +74,17 @@ const SAMPLE_JOBS = [
 
 // Mock functions (not used in demo mode, but kept for future API integration)
 async function analyzeCV(cvText: string) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY environment variable is not set');
+  }
+  
+  console.log('🤖 OpenAI API Key present:', apiKey.substring(0, 7) + '...' + apiKey.substring(apiKey.length - 4));
+  console.log('🤖 CV text length:', cvText.length, 'characters');
+  
   const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: apiKey,
   });
 
   console.log('🤖 Sending CV to OpenAI for intelligent parsing...');
@@ -280,9 +289,18 @@ export async function POST(request: NextRequest) {
         console.log('Successfully parsed CV with OpenAI');
       } catch (error: any) {
         if (error?.status === 429 || error?.message?.includes('429')) {
-          console.warn('⚠️ OpenAI rate limit (429). Extracting basic info from CV text...');
+          console.error('⚠️ OpenAI rate limit (429). Extracting basic info from CV text...');
+        } else if (error?.status === 401 || error?.message?.includes('401') || error?.message?.includes('Incorrect API key')) {
+          console.error('❌ OpenAI API key invalid or missing. Check OPENAI_API_KEY environment variable.');
+          console.error('   Error:', error?.message || error);
+        } else if (error?.code === 'ENOTFOUND' || error?.code === 'ETIMEDOUT') {
+          console.error('❌ Network error connecting to OpenAI:', error?.message);
         } else {
-          console.error('OpenAI parsing failed, extracting basic info from text:', error);
+          console.error('❌ OpenAI parsing failed, extracting basic info from text');
+          console.error('   Error type:', error?.constructor?.name);
+          console.error('   Error message:', error?.message);
+          console.error('   Error status:', error?.status);
+          console.error('   Full error:', JSON.stringify(error, null, 2));
         }
         cvProfile = extractBasicInfoFromText(extractedText);
         matches = getMockMatches();
