@@ -7,6 +7,7 @@ import {
   extractEducationWithPatterns,
   enhanceExperiencesWithAI
 } from '@/lib/cv-parser-v2';
+import { parseCVWithVision, parseCVWithText } from '@/lib/cv-parser-vision';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -615,10 +616,21 @@ export async function POST(request: NextRequest) {
     
     if (process.env.OPENAI_API_KEY) {
       try {
-        console.log('Using OpenAI to parse CV...');
-        cvProfile = await analyzeCV(extractedText);
+        console.log('🚀 Attempting GPT-4o Vision parsing (like ChatGPT)...');
+        
+        // Try vision-based parsing first (best quality, like ChatGPT)
+        try {
+          cvProfile = await parseCVWithVision(buffer, process.env.OPENAI_API_KEY);
+          console.log('✅ Successfully parsed CV with GPT-4o Vision');
+        } catch (visionError: any) {
+          console.log('⚠️ Vision parsing failed, falling back to text mode:', visionError.message);
+          
+          // Fallback to text-based parsing with GPT-4o
+          cvProfile = await parseCVWithText(extractedText, process.env.OPENAI_API_KEY);
+          console.log('✅ Successfully parsed CV with GPT-4o (text mode)');
+        }
+        
         matches = await rankJobs(cvProfile);
-        console.log('Successfully parsed CV with OpenAI');
       } catch (error: any) {
         if (error?.status === 400) {
           console.error('❌ OpenAI Bad Request (400) - Invalid request format');
