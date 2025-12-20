@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pdf from 'pdf-parse';
 import OpenAI from 'openai';
+import {
+  preprocessCVText,
+  extractExperiencesWithPatterns,
+  extractEducationWithPatterns,
+  enhanceExperiencesWithAI
+} from '@/lib/cv-parser-v2';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -72,7 +78,7 @@ const SAMPLE_JOBS = [
   }
 ];
 
-// Mock functions (not used in demo mode, but kept for future API integration)
+// Hybrid CV Parser - Uses pattern matching + AI enhancement
 async function analyzeCV(cvText: string) {
   const apiKey = process.env.OPENAI_API_KEY;
   
@@ -80,21 +86,43 @@ async function analyzeCV(cvText: string) {
     throw new Error('OPENAI_API_KEY environment variable is not set');
   }
   
+  console.log('🔬 HYBRID CV PARSER - Starting analysis');
   console.log('🤖 OpenAI API Key present:', apiKey.substring(0, 7) + '...' + apiKey.substring(apiKey.length - 4));
-  console.log('🤖 CV text length:', cvText.length, 'characters');
-  console.log('🤖 First 800 chars of CV text:');
+  console.log('📄 CV text length:', cvText.length, 'characters');
+  console.log('📄 First 800 chars of CV text:');
   console.log(cvText.substring(0, 800));
-  console.log('...');
+  console.log('...\n');
+  
+  // STEP 1: Preprocess and structure the text
+  console.log('🔍 STEP 1: Preprocessing CV text...');
+  const { lines, cleanText, sections } = preprocessCVText(cvText);
+  console.log('   ✓ Detected sections:', Array.from(sections.keys()).join(', ') || 'none');
+  
+  // STEP 2: Pattern-based extraction (deterministic - always reliable)
+  console.log('\n🎯 STEP 2: Pattern-based extraction...');
+  const experienceText = sections.get('experience')?.text || cleanText;
+  const patternExperiences = extractExperiencesWithPatterns(experienceText);
+  
+  const educationText = sections.get('education')?.text || cleanText;
+  const patternEducation = extractEducationWithPatterns(educationText);
+  
+  // STEP 3: AI enhancement (only if patterns failed)
+  console.log('\n🤖 STEP 3: AI enhancement...');
+  let experiences = patternExperiences;
+  if (experiences.length === 0) {
+    console.log('   No patterns found, using AI extraction...');
+    experiences = await enhanceExperiencesWithAI(cvText, [], apiKey);
+  } else {
+    console.log('   ✓ Using pattern-based experiences (reliable!)');
+  }
   
   const openai = new OpenAI({
     apiKey: apiKey,
   });
 
-  console.log('🤖 Sending CV to OpenAI for intelligent parsing...');
-
   // Try GPT-4 first, fall back to GPT-3.5-turbo if not available
   const model = process.env.OPENAI_MODEL || 'gpt-4';
-  console.log('🤖 Using model:', model);
+  console.log('\n🤖 Using AI model:', model, 'for remaining fields...');
 
   const systemPrompt = `You are a conservative CV parsing engine for a job platform.
 
@@ -322,8 +350,6 @@ Example 3 - Education without header:
 CV Text: "Technical University of Denmark | BSc Computer Science | 2015-2019"
 Extract: {"institution": "Technical University of Denmark", "degree": "BSc", "field": "Computer Science", "start_date": "2015", "end_date": "2019"}
 
-⚠️ CRITICAL: Even if the CV has no "Experience" or "Education" headers, you MUST scan the entire document for these patterns and extract them!
-
 YOUR OUTPUT WILL BE SHOWN IN A WIZARD WHERE USERS CONFIRM OR CORRECT:
 - name
 - job titles + companies  
@@ -334,17 +360,43 @@ YOUR OUTPUT WILL BE SHOWN IN A WIZARD WHERE USERS CONFIRM OR CORRECT:
 
 This means conservative uncertainty is acceptable and expected.`;
 
+  // Simplified AI prompt - We already have experience/education from patterns!
+  const simplifiedPrompt = `Extract basic CV information (NOT experience/education - we have those already).
+
+Return JSON:
+{
+  "name": "string or null",
+  "name_confidence": "high" | "medium" | "low",
+  "title": "string or null (job title/professional designation)",
+  "summary": "string or null (brief bio/profile)",
+  "contact": {
+    "email": "string or null",
+    "phone": "string or null",
+    "location": "string or null (city, country)",
+    "linkedin": "string or null"
+  },
+  "skills": ["array of technical skills, tools, frameworks"],
+  "languages": ["array of spoken/written languages like English, Danish, Spanish"]
+}
+
+Rules:
+- ONLY extract what's clearly present
+- Skills = technical abilities (Python, AWS, Agile)
+- Languages = spoken languages (English, Danish), NOT programming languages
+- Return null if not found
+- Be conservative`;
+
   try {
     const completion = await openai.chat.completions.create({
       model: model,
       messages: [
         {
           role: 'system',
-          content: systemPrompt
+          content: simplifiedPrompt
         },
         {
           role: 'user',
-          content: `Parse this CV/Resume and extract all information:\n\n${cvText.substring(0, 12000)}`
+          content: `CV Text:\n\n${cvText.substring(0, 8000)}`
         }
       ],
       temperature: 0.1,
@@ -356,35 +408,57 @@ This means conservative uncertainty is acceptable and expected.`;
     throw new Error('No response from OpenAI');
   }
 
-  const parsed = JSON.parse(content);
-  console.log('🤖 OpenAI successfully parsed CV');
-  console.log('   Name:', parsed.name, `(confidence: ${parsed.name_confidence || 'unknown'})`);
-  console.log('   Title:', parsed.title);
-  console.log('   Skills count:', parsed.skills?.length || 0);
-  console.log('   Languages count:', parsed.languages?.length || 0);
-  console.log('   Experience entries:', parsed.experience?.length || 0);
-  if (parsed.experience && parsed.experience.length > 0) {
-    console.log('   📋 Experiences found:');
-    parsed.experience.forEach((exp: any, idx: number) => {
-      console.log(`      ${idx + 1}. ${exp.role || 'No role'} at ${exp.company || 'No company'} (${exp.start_date || '?'} - ${exp.end_date || '?'})`);
-    });
-  } else {
-    console.warn('   ⚠️ WARNING: No experience entries extracted!');
-  }
-  console.log('   Education entries:', parsed.education?.length || 0);
-  if (parsed.education && parsed.education.length > 0) {
-    console.log('   🎓 Education found:');
-    parsed.education.forEach((edu: any, idx: number) => {
-      console.log(`      ${idx + 1}. ${edu.degree || 'No degree'} at ${edu.institution || 'No institution'} (${edu.start_date || '?'} - ${edu.end_date || '?'})`);
-    });
-  } else {
-    console.warn('   ⚠️ WARNING: No education entries extracted!');
-  }
+  const basicInfo = JSON.parse(content);
+  console.log('   ✓ AI extracted basic info');
+  console.log('      Name:', basicInfo.name);
+  console.log('      Title:', basicInfo.title);
+  console.log('      Skills:', basicInfo.skills?.length || 0);
+  console.log('      Languages:', basicInfo.languages?.length || 0);
 
-  return parsed;
+  // STEP 4: Combine pattern-based data with AI-extracted basic info
+  console.log('\n🔧 STEP 4: Combining results...');
+  const finalProfile = {
+    ...basicInfo,
+    experience: experiences.map((exp: any, idx: number) => ({
+      id: `exp_${idx + 1}`,
+      company: exp.company || null,
+      role: exp.role || null,
+      location: exp.location || null,
+      start_date: exp.start_date || null,
+      end_date: exp.end_date || null,
+      date_confidence: exp.confidence || 'medium',
+      bullets: exp.description ? [exp.description] : [],
+      source_snippet: `${exp.company} - ${exp.role} (${exp.start_date} - ${exp.end_date || 'Present'})`
+    })),
+    education: patternEducation.map((edu: any, idx: number) => ({
+      id: `edu_${idx + 1}`,
+      institution: edu.institution || null,
+      degree: edu.degree || null,
+      field: edu.field || null,
+      start_date: edu.start_date || null,
+      end_date: edu.end_date || null,
+      details: [],
+      source_snippet: `${edu.degree} at ${edu.institution}`
+    }))
+  };
+
+  console.log('\n✅ FINAL PARSED PROFILE:');
+  console.log('   Name:', finalProfile.name);
+  console.log('   Experience entries:', finalProfile.experience.length);
+  finalProfile.experience.forEach((exp: any, idx: number) => {
+    console.log(`      ${idx + 1}. ${exp.role} at ${exp.company} (${exp.start_date} - ${exp.end_date})`);
+  });
+  console.log('   Education entries:', finalProfile.education.length);
+  finalProfile.education.forEach((edu: any, idx: number) => {
+    console.log(`      ${idx + 1}. ${edu.degree} at ${edu.institution}`);
+  });
+  console.log('   Skills:', finalProfile.skills?.length || 0);
+  console.log('   Languages:', finalProfile.languages?.length || 0);
+
+  return finalProfile;
   
   } catch (error: any) {
-    // If GPT-4 is not available (404 or 400), try GPT-3.5-turbo
+    // If GPT-4 is not available, try GPT-3.5-turbo
     if ((error?.status === 404 || error?.status === 400) && model === 'gpt-4') {
       console.warn('⚠️ GPT-4 not available, retrying with gpt-3.5-turbo...');
       
@@ -393,11 +467,11 @@ This means conservative uncertainty is acceptable and expected.`;
         messages: [
           {
             role: 'system',
-            content: systemPrompt  // Use same conservative prompt
+            content: simplifiedPrompt
           },
           {
             role: 'user',
-            content: `Parse this CV/Resume and extract all information:\n\n${cvText.substring(0, 12000)}`
+            content: `CV Text:\n\n${cvText.substring(0, 8000)}`
           }
         ],
         temperature: 0.1,
@@ -409,21 +483,38 @@ This means conservative uncertainty is acceptable and expected.`;
         throw new Error('No response from OpenAI (fallback model)');
       }
       
-      const parsed = JSON.parse(fallbackContent);
+      const basicInfo = JSON.parse(fallbackContent);
       console.log('✅ Successfully parsed with gpt-3.5-turbo');
-      console.log('   Name:', parsed.name, `(confidence: ${parsed.name_confidence || 'unknown'})`);
-      console.log('   Experience entries:', parsed.experience?.length || 0);
-      if (parsed.experience && parsed.experience.length > 0) {
-        console.log('   📋 Experiences found:');
-        parsed.experience.forEach((exp: any, idx: number) => {
-          console.log(`      ${idx + 1}. ${exp.role || 'No role'} at ${exp.company || 'No company'}`);
-        });
-      } else {
-        console.warn('   ⚠️ WARNING: No experience entries extracted!');
-      }
-      console.log('   Education entries:', parsed.education?.length || 0);
       
-      return parsed;
+      // Combine with pattern-based data
+      const finalProfile = {
+        ...basicInfo,
+        experience: experiences.map((exp: any, idx: number) => ({
+          id: `exp_${idx + 1}`,
+          company: exp.company || null,
+          role: exp.role || null,
+          location: exp.location || null,
+          start_date: exp.start_date || null,
+          end_date: exp.end_date || null,
+          date_confidence: exp.confidence || 'medium',
+          bullets: exp.description ? [exp.description] : [],
+          source_snippet: `${exp.company} - ${exp.role}`
+        })),
+        education: patternEducation.map((edu: any, idx: number) => ({
+          id: `edu_${idx + 1}`,
+          institution: edu.institution || null,
+          degree: edu.degree || null,
+          field: edu.field || null,
+          start_date: edu.start_date || null,
+          end_date: edu.end_date || null,
+          details: []
+        }))
+      };
+      
+      console.log('   Experience from patterns:', finalProfile.experience.length);
+      console.log('   Education from patterns:', finalProfile.education.length);
+      
+      return finalProfile;
     }
     
     // Re-throw if not a model availability issue
