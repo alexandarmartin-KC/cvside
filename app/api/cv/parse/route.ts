@@ -671,15 +671,16 @@ export async function POST(request: NextRequest) {
     // Add compatibility layer for frontend (old format expected)
     // New format: { skills: [], languages: [], contact: { location: "..." } }
     // Old format: { core_skills: [], locations: [] }
+    const cvProfileAny = cvProfile as any;
     const compatibleProfile = {
       ...cvProfile,
-      core_skills: cvProfile.skills || cvProfile.core_skills || [],
+      core_skills: cvProfile.skills || cvProfileAny.core_skills || [],
       locations: cvProfile.contact?.location 
         ? [cvProfile.contact.location]
-        : (cvProfile.locations || []),
-      seniority_level: cvProfile.seniority_level || "Mid",
+        : (cvProfileAny.locations || []),
+      seniority_level: cvProfileAny.seniority_level || "Mid",
       // Keep new format fields too for future compatibility
-      skills: cvProfile.skills || cvProfile.core_skills || [],
+      skills: cvProfile.skills || cvProfileAny.core_skills || [],
       languages: cvProfile.languages || [],
       contact: cvProfile.contact || {},
       // Ensure experience and education have IDs
