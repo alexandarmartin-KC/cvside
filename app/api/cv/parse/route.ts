@@ -9,6 +9,7 @@ import {
 } from '@/lib/cv-parser-v2';
 import { parseCVWithDirectUpload, parseCVWithText } from '@/lib/cv-parser-vision';
 import { parseCVWithVision } from '@/lib/cv-parser-vision-images';
+import { parseCVWithAssistants } from '@/lib/cv-parser-assistants';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -611,18 +612,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Try to use OpenAI Vision to parse the CV (best quality - can see layout)
+    // Use OpenAI Assistants API - the REAL way ChatGPT handles PDFs
     let cvProfile;
     let matches;
     
     if (process.env.OPENAI_API_KEY) {
       try {
-        console.log('🎨 Using GPT-4o VISION to parse CV (can see layout, columns, formatting)...');
+        console.log('🤖 Using OpenAI Assistants API (same as ChatGPT file uploads)...');
         console.log('📄 PDF size:', (buffer.length / 1024).toFixed(2), 'KB');
+        console.log('📄 File name:', file.name);
         
-        // Use GPT-4o Vision to actually "see" the CV like ChatGPT does
-        cvProfile = await parseCVWithVision(buffer);
-        console.log('✅ Successfully parsed CV with GPT-4o Vision');
+        // Use Assistants API - can read PDF structure natively like ChatGPT
+        cvProfile = await parseCVWithAssistants(buffer, file.name);
+        console.log('✅ Successfully parsed CV with Assistants API');
         console.log('📊 Extracted data summary:');
         console.log('   - Name:', cvProfile.name);
         console.log('   - Experience:', cvProfile.experience?.length || 0, 'entries');
