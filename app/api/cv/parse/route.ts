@@ -8,6 +8,7 @@ import {
   enhanceExperiencesWithAI
 } from '@/lib/cv-parser-v2';
 import { parseCVWithDirectUpload, parseCVWithText } from '@/lib/cv-parser-vision';
+import { parseCVWithVision } from '@/lib/cv-parser-vision-images';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -610,25 +611,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Try to use OpenAI to parse the CV, fall back to text extraction if not available
+    // Try to use OpenAI Vision to parse the CV (best quality - can see layout)
     let cvProfile;
     let matches;
     
     if (process.env.OPENAI_API_KEY) {
       try {
-        console.log('🚀 Using GPT-4o to parse CV...');
-        console.log('📄 Extracted text length:', extractedText.length, 'characters');
-        console.log('📄 First 500 chars of text:', extractedText.substring(0, 500));
+        console.log('🎨 Using GPT-4o VISION to parse CV (can see layout, columns, formatting)...');
+        console.log('📄 PDF size:', (buffer.length / 1024).toFixed(2), 'KB');
         
-        // Use GPT-4o with comprehensive prompt on extracted text
-        // (Assistants API disabled temporarily - too slow/complex)
-        cvProfile = await parseCVWithText(extractedText, process.env.OPENAI_API_KEY);
-        console.log('✅ Successfully parsed CV with GPT-4o');
+        // Use GPT-4o Vision to actually "see" the CV like ChatGPT does
+        cvProfile = await parseCVWithVision(buffer);
+        console.log('✅ Successfully parsed CV with GPT-4o Vision');
         console.log('📊 Extracted data summary:');
         console.log('   - Name:', cvProfile.name);
         console.log('   - Experience:', cvProfile.experience?.length || 0, 'entries');
+        
+        // Show detailed experience data
+        if (cvProfile.experience && cvProfile.experience.length > 0) {
+          cvProfile.experience.forEach((exp: any, idx: number) => {
+            console.log(`   Experience ${idx + 1}: ${exp.company} - ${exp.role} (${exp.start_date} - ${exp.end_date})`);
+            console.log(`      Location: ${exp.location || 'N/A'}`);
+            console.log(`      Bullets: ${exp.bullets?.length || 0} items`);
+            if (exp.bullets && exp.bullets.length > 0) {
+              exp.bullets.slice(0, 3).forEach((bullet: string, i: number) => {
+                console.log(`         ${i + 1}. ${bullet.substring(0, 80)}${bullet.length > 80 ? '...' : ''}`);
+              });
+              if (exp.bullets.length > 3) {
+                console.log(`         ... and ${exp.bullets.length - 3} more`);
+              }
+            }
+          });
+        }
+        
         console.log('   - Education:', cvProfile.education?.length || 0, 'entries');
         console.log('   - Skills:', cvProfile.skills?.length || 0);
+        console.log('   - Languages:', cvProfile.languages?.length || 0);
         
         matches = await rankJobs(cvProfile);
       } catch (error: any) {
