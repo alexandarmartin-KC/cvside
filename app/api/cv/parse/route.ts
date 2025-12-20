@@ -7,7 +7,7 @@ import {
   extractEducationWithPatterns,
   enhanceExperiencesWithAI
 } from '@/lib/cv-parser-v2';
-import { parseCVWithVision, parseCVWithText } from '@/lib/cv-parser-vision';
+import { parseCVWithDirectUpload, parseCVWithText } from '@/lib/cv-parser-vision';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -616,13 +616,25 @@ export async function POST(request: NextRequest) {
     
     if (process.env.OPENAI_API_KEY) {
       try {
-        console.log('🚀 Using GPT-4o to parse CV (like ChatGPT)...');
-        console.log('📄 Extracted text length:', extractedText.length, 'characters');
+        console.log('🚀 Using GPT-4o with native PDF reading (like ChatGPT)...');
         
-        // Use GPT-4o with the extracted text
-        // Note: GPT-4o Vision doesn't support PDF directly, so we use text with smart parsing
-        cvProfile = await parseCVWithText(extractedText, process.env.OPENAI_API_KEY);
-        console.log('✅ Successfully parsed CV with GPT-4o');
+        // Try native PDF upload first (best quality - exactly like ChatGPT)
+        try {
+          cvProfile = await parseCVWithDirectUpload(
+            buffer, 
+            process.env.OPENAI_API_KEY,
+            file.name
+          );
+          console.log('✅ Successfully parsed CV with native PDF reading');
+        } catch (uploadError: any) {
+          console.log('⚠️ Native PDF parsing failed:', uploadError.message);
+          console.log('   Falling back to text extraction + GPT-4o...');
+          
+          // Fallback to text-based parsing
+          console.log('📄 Extracted text length:', extractedText.length, 'characters');
+          cvProfile = await parseCVWithText(extractedText, process.env.OPENAI_API_KEY);
+          console.log('✅ Successfully parsed CV with GPT-4o (text mode)');
+        }
         
         matches = await rankJobs(cvProfile);
       } catch (error: any) {

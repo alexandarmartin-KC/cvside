@@ -1,11 +1,12 @@
 /**
- * CV Parser using GPT-4o Vision
+ * CV Parser using GPT-4o with native PDF support
  * 
- * This version uses GPT-4o's vision capabilities to parse PDFs directly,
- * similar to how ChatGPT can understand your CV when you upload it.
+ * This uses OpenAI's file upload capability where GPT-4o can read PDFs directly,
+ * exactly like ChatGPT does when you upload a PDF.
  */
 
 import OpenAI from 'openai';
+import { Readable } from 'stream';
 
 interface ParsedCV {
   name: string | null;
@@ -25,7 +26,7 @@ interface ParsedCV {
     location?: string;
     start_date: string;
     end_date: string;
-    description?: string;
+    bullets?: string[];
     confidence: 'high' | 'medium' | 'low';
   }>;
   education: Array<{
@@ -45,9 +46,173 @@ interface ParsedCV {
 }
 
 /**
- * Parse a CV using GPT-4o Vision
- * Converts PDF buffer to base64 images and uses vision API
+ * Parse a CV by uploading the PDF directly to OpenAI
+ * This allows GPT-4o to read the PDF natively with full structure preservation
  */
+export async function parseCVWithDirectUpload(
+  pdfBuffer: Buffer,
+  apiKey: string,
+  filename: string = 'cv.pdf'
+): Promise<ParsedCV> {
+  const openai = new OpenAI({ apiKey });
+
+  console.log('🔬 CV PARSER - Using GPT-4o with native PDF reading');
+  console.log('📄 PDF buffer size:', pdfBuffer.length, 'bytes');
+  console.log('📤 Uploading PDF to OpenAI for native parsing...');
+
+  try {
+    // Convert Buffer to File-like object for upload
+    const file = new File([pdfBuffer], filename, { type: 'application/pdf' });
+    
+    // Upload the PDF file to OpenAI
+    const uploadedFile = await openai.files.create({
+      file: file,
+      purpose: 'assistants'
+    });
+
+    console.log('✅ PDF uploaded to OpenAI:', uploadedFile.id);
+
+    // Create an assistant that can read PDFs
+    const assistant = await openai.beta.assistants.create({
+      name: "CV Parser",
+      instructions: `You are an expert CV/Resume parser. Read the uploaded PDF CV and extract ALL information comprehensively.
+
+CRITICAL: Extract EVERYTHING you see in the CV - be extremely thorough.
+
+Return ONLY valid JSON with this exact structure:
+{
+  "name": "Full Name",
+  "name_confidence": "high",
+  "title": "Professional Title",
+  "summary": "Professional summary if present",
+  "contact": {
+    "email": "email@example.com",
+    "phone": "+1234567890",
+    "location": "City, Country",
+    "linkedin": "https://linkedin.com/in/username"
+  },
+  "experience": [
+    {
+      "company": "Company Name",
+      "role": "Job Title",
+      "location": "City, Country",
+      "start_date": "YYYY-MM or YYYY",
+      "end_date": "YYYY-MM or YYYY or Present",
+      "bullets": [
+        "First responsibility",
+        "Second achievement",
+        "Third project"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "education": [
+    {
+      "institution": "University Name",
+      "degree": "Bachelor of Science",
+      "field": "Computer Science",
+      "location": "City, Country",
+      "start_date": "YYYY",
+      "end_date": "YYYY",
+      "confidence": "high"
+    }
+  ],
+  "skills": ["Skill1", "Skill2", "Skill3"],
+  "languages": ["English (Native)", "Spanish (Fluent)"],
+  "seniority_level": "Junior|Mid|Senior|Lead"
+}
+
+RULES:
+- Extract ALL work experiences with ALL bullet points
+- Extract ALL education entries
+- Extract ALL skills (technical only, not spoken languages)
+- Spoken languages go in "languages" field with proficiency
+- Return ONLY the JSON, no other text`,
+      model: "gpt-4o",
+      tools: [{ type: "file_search" }]
+    });
+
+    console.log('✅ Assistant created:', assistant.id);
+
+    // Create a thread with the file
+    const thread = await openai.beta.threads.create({
+      messages: [
+        {
+          role: "user",
+          content: "Please parse this CV completely and return the JSON with all information.",
+          attachments: [
+            {
+              file_id: uploadedFile.id,
+              tools: [{ type: "file_search" }]
+            }
+          ]
+        }
+      ]
+    });
+
+    console.log('✅ Thread created:', thread.id);
+
+    // Run the assistant
+    const run = await openai.beta.threads.runs.createAndPoll(thread.id, {
+      assistant_id: assistant.id
+    });
+
+    console.log('✅ Run completed:', run.status);
+
+    if (run.status === 'completed') {
+      const messages = await openai.beta.threads.messages.list(thread.id);
+      const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
+      
+      if (assistantMessage && assistantMessage.content[0].type === 'text') {
+        const responseText = assistantMessage.content[0].text.value;
+        console.log('📥 Received response from assistant');
+        
+        // Extract JSON from response (might have markdown formatting)
+        let jsonText = responseText;
+        const jsonMatch = responseText.match(/```json\n?(.*?)\n?```/s) || responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          jsonText = jsonMatch[1] || jsonMatch[0];
+        }
+
+        const parsed = JSON.parse(jsonText);
+        
+        // Clean up - delete the assistant and file
+        await openai.beta.assistants.del(assistant.id);
+        await openai.files.del(uploadedFile.id);
+        
+        console.log('✅ Successfully parsed CV with native PDF reading');
+        console.log('   Name:', parsed.name || 'Not found');
+        console.log('   Title:', parsed.title || 'Not found');
+        console.log('   Experience entries:', parsed.experience?.length || 0);
+        console.log('   Education entries:', parsed.education?.length || 0);
+        console.log('   Skills:', parsed.skills?.length || 0);
+
+        // Add IDs
+        if (parsed.experience) {
+          parsed.experience = parsed.experience.map((exp: any, idx: number) => ({
+            ...exp,
+            id: exp.id || `exp_${idx + 1}`
+          }));
+        }
+
+        if (parsed.education) {
+          parsed.education = parsed.education.map((edu: any, idx: number) => ({
+            ...edu,
+            id: edu.id || `edu_${idx + 1}`
+          }));
+        }
+
+        return parsed as ParsedCV;
+      }
+    }
+
+    throw new Error(`Assistant run failed with status: ${run.status}`);
+
+  } catch (error: any) {
+    console.error('❌ Native PDF parsing failed:', error.message);
+    throw error;
+  }
+}
 export async function parseCVWithVision(
   pdfBuffer: Buffer,
   apiKey: string
