@@ -6,7 +6,7 @@
  */
 
 import OpenAI from 'openai';
-import type { Uploadable } from 'openai/uploads';
+import { toFile } from 'openai/uploads';
 
 interface ParsedCV {
   name: string | null;
@@ -61,12 +61,12 @@ export async function parseCVWithDirectUpload(
   console.log('📤 Uploading PDF to OpenAI for native parsing...');
 
   try {
-    // Convert Buffer to Blob for OpenAI upload
-    const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
+    // Convert Buffer to File format for OpenAI
+    const fileToUpload = await toFile(pdfBuffer, filename, { type: 'application/pdf' });
     
     // Upload the PDF file to OpenAI
     const uploadedFile = await openai.files.create({
-      file: blob as Uploadable,
+      file: fileToUpload,
       purpose: 'assistants'
     });
 
