@@ -110,18 +110,25 @@ export default function UploadPage() {
               const parsed = JSON.parse(pendingData);
               console.log('Found pending CV data, saving to profile...');
               
+              // Safely extract data with fallbacks
+              const cvData = parsed.cvProfile || {};
+              const skills = cvData.skills || cvData.core_skills || [];
+              const locations = cvData.contact?.location 
+                ? [cvData.contact.location] 
+                : (cvData.locations || []);
+              
               // Save the pending CV data
               const saveResponse = await fetch('/api/cv/save-profile', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  name: parsed.cvProfile.name,
-                  title: parsed.cvProfile.title,
-                  seniority: parsed.cvProfile.seniority_level,
-                  summary: parsed.cvProfile.summary,
-                  skills: parsed.cvProfile.core_skills,
-                  locations: parsed.cvProfile.locations,
-                  preferredLocation: parsed.cvProfile.locations[0] || '',
+                  name: cvData.name,
+                  title: cvData.title,
+                  seniority: cvData.seniority_level || cvData.seniority,
+                  summary: cvData.summary,
+                  skills: skills,
+                  locations: locations,
+                  preferredLocation: locations.length > 0 ? locations[0] : '',
                   cvFileName: parsed.fileName || 'CV.pdf',
                 }),
               });
@@ -299,17 +306,27 @@ export default function UploadPage() {
 
     try {
       console.log('Saving CV profile...');
+      
+      // Safely extract data with fallbacks for both old and new format
+      const cvProfile = dataToSave.cvProfile || {};
+      const skills = cvProfile.skills || cvProfile.core_skills || [];
+      const locations = cvProfile.contact?.location 
+        ? [cvProfile.contact.location] 
+        : (cvProfile.locations || []);
+      
       const response = await fetch('/api/cv/save-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: dataToSave.cvProfile.name,
-          title: dataToSave.cvProfile.title,
-          seniority: dataToSave.cvProfile.seniority_level,
-          summary: dataToSave.cvProfile.summary,
-          skills: cvData ? dataToSave.cvProfile.core_skills : manualSkills,
-          locations: cvData ? dataToSave.cvProfile.locations : manualLocations,
-          preferredLocation: cvData ? (dataToSave.cvProfile.locations[0] || '') : preferredLocation,
+          name: cvProfile.name,
+          title: cvProfile.title,
+          seniority: cvProfile.seniority_level || cvProfile.seniority,
+          summary: cvProfile.summary,
+          skills: cvData ? skills : manualSkills,
+          locations: cvData ? locations : manualLocations,
+          preferredLocation: cvData 
+            ? (locations.length > 0 ? locations[0] : '') 
+            : preferredLocation,
           workPreference: 'ANY',
           cvFileName: file?.name || 'CV.pdf',
           cvUrl: dataToSave.cvDataUrl || null,

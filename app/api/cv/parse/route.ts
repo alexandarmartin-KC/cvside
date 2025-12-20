@@ -435,9 +435,24 @@ export async function POST(request: NextRequest) {
       matches = getMockMatches();
     }
 
+    // Add compatibility layer for frontend (old format expected)
+    // New format: { skills: [], contact: { location: "..." } }
+    // Old format: { core_skills: [], locations: [] }
+    const compatibleProfile = {
+      ...cvProfile,
+      core_skills: cvProfile.skills || cvProfile.core_skills || [],
+      locations: cvProfile.contact?.location 
+        ? [cvProfile.contact.location]
+        : (cvProfile.locations || []),
+      seniority_level: cvProfile.seniority_level || "Mid",
+      // Keep new format fields too for future compatibility
+      skills: cvProfile.skills || cvProfile.core_skills || [],
+      contact: cvProfile.contact || {},
+    };
+
     // Return comprehensive response
     return NextResponse.json({
-      cvProfile,
+      cvProfile: compatibleProfile,
       matches: matches.matches || matches,
       jobs: SAMPLE_JOBS,
       cvDataUrl,  // Include the base64 PDF data URL
