@@ -23,6 +23,7 @@ export default function UploadPage() {
       seniority?: string;
       core_skills?: string[];
       skills?: string[];
+      languages?: string[];
       locations?: string[];
       contact?: {
         email?: string | null;
@@ -32,19 +33,25 @@ export default function UploadPage() {
       };
       summary: string;
       experience?: Array<{
+        id?: string;
         company: string;
         role: string;
         location?: string;
         start_date: string;
         end_date: string;
+        date_confidence?: string;
         bullets: string[];
+        source_snippet?: string;
       }>;
       education?: Array<{
+        id?: string;
         degree: string;
         institution: string;
         field?: string;
         start_date?: string;
         end_date?: string;
+        details?: string[];
+        source_snippet?: string;
       }>;
     };
     matches: Array<{

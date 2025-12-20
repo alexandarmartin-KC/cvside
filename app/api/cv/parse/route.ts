@@ -93,42 +93,89 @@ async function analyzeCV(cvText: string) {
   const model = process.env.OPENAI_MODEL || 'gpt-4';
   console.log('🤖 Using model:', model);
 
-  try {
-    const completion = await openai.chat.completions.create({
-      model: model,
-      messages: [
-        {
-          role: 'system',
-          content: `You are a CV parsing engine. Your job is to read raw CV text and output clean structured JSON. The CV can have any layout or design.
+  const systemPrompt = `You are a conservative CV parsing engine for a job platform.
 
-The input is the FULL TEXT of a CV extracted from a PDF (line breaks preserved).
-Sometimes the PDF extraction splits lines in strange ways, or moves dates onto separate lines from company names. Do your best to associate them correctly, but **never invent information**.
+Your task is to extract structured CV data from raw CV text so the user can
+confirm each extracted field in a verification wizard.
 
-Your goals:
-1. Identify the candidate's name.
-2. Extract core profile info.
-3. Extract work experience with correct date ranges, as reliably as possible.
-4. Extract education.
-5. DO NOT hallucinate missing data.
+The input is full plaintext extracted from a PDF. The layout may be broken:
+- columns merged
+- dates separated from job titles
+- OCR errors
+- inconsistent spacing and newlines
 
-IMPORTANT RULES ABOUT DATES:
-- Only use dates that literally appear in the CV text.
-- Keep the original date string format (e.g. "Nov 2020", "11/2020", "November 2020").
-- If you are NOT certain which dates belong to which job, set "start_date" and "end_date" to null for that job and include the raw lines in "source_snippet" so a human can fix it.
-- Do not invent months or years that are not explicitly written.
-- Do not reorder years (e.g. 2020–2022 must stay that way, never 2022–2020).
+CORE PRINCIPLES:
+- NEVER guess or invent information
+- ONLY extract what is literally present in the text
+- If uncertain, set fields to null and mark confidence low
+- It is better to return incomplete but correct than complete but wrong
+- Provide source snippets to help user confirm/correct during onboarding
 
-IMPORTANT RULES ABOUT NAME:
-- The candidate's full name is usually in the very top lines.
-- Ignore headers like "CV", "Curriculum Vitae", "Resume".
-- If multiple names appear, choose the one that looks like a personal name, especially near contact info (email, phone).
-- If you are unsure, pick your best guess and keep "name_confidence": "low".
+-----------------------------------
+WHAT YOU MUST IDENTIFY:
+-----------------------------------
 
-OUTPUT FORMAT:
-Return a single JSON object in this shape:
+1. Candidate personal info
+   - name
+   - email
+   - phone
+   - location
+   - linkedin URL if present
+
+2. Work experience
+   - employer/company
+   - job title/role
+   - start/end dates
+   - location (optional)
+   - bullet points under job
+   - confidence level for dates
+   - original text snippet
+
+3. Education history
+   - institution
+   - degree
+   - field
+   - start/end dates
+   - confidence + snippet
+
+4. Skills list
+5. Languages list
+6. Professional title (if present)
+7. Summary/profile paragraph (optional)
+
+-----------------------------------
+NAME RULES:
+-----------------------------------
+- Only extract name if clearly shown
+- Usually in top lines or near contact info
+- If multiple names appear, choose the one associated with contact details
+- If uncertain, set name_confidence = "low"
+
+-----------------------------------
+DATE RULES:
+-----------------------------------
+- Only extract dates exactly as written
+- Do NOT infer missing months/years
+- If date does not confidently belong to a job → start & end = null, confidence low
+- Preserve original ordering and formatting
+- Prefer to leave ambiguous date associations unresolved
+
+-----------------------------------
+EXPERIENCE RULES:
+-----------------------------------
+- Collapse lines that clearly belong to a job into a single experience object
+- A job is defined by at least a company OR a role
+- Bullets may follow without a header; include them if they appear plausibly linked
+- If unsure about grouping, assign to job but mark date_confidence low
+- Always include a source_snippet showing the raw lines used
+
+-----------------------------------
+OUTPUT FORMAT (STRICT)
+-----------------------------------
+Return a single JSON object in exactly this format:
 
 {
-  "name": "string",
+  "name": "string or null",
   "name_confidence": "high" | "medium" | "low",
   "title": "string or null",
   "summary": "string or null",
@@ -139,45 +186,72 @@ Return a single JSON object in this shape:
     "linkedin": "string or null"
   },
   "skills": ["string", ...],
+  "languages": ["string", ...],
   "experience": [
     {
-      "company": "string",
+      "id": "exp_1",
+      "company": "string or null",
       "role": "string or null",
       "location": "string or null",
       "start_date": "string or null",
       "end_date": "string or null",
       "date_confidence": "high" | "medium" | "low",
       "bullets": ["string", ...],
-      "source_snippet": "short excerpt of the original lines for this job"
+      "source_snippet": "short excerpt of lines"
     }
   ],
   "education": [
     {
-      "institution": "string",
+      "id": "edu_1",
+      "institution": "string or null",
       "degree": "string or null",
       "field": "string or null",
       "start_date": "string or null",
       "end_date": "string or null",
       "details": ["string", ...],
-      "source_snippet": "short excerpt of the original lines for this education"
+      "source_snippet": "short excerpt of lines"
     }
-  ],
-  "raw_notes": "optional comments if something was ambiguous"
+  ]
 }
 
-General rules:
-- Do not include any text outside the JSON.
-- If some sections are missing in the CV, return empty arrays for them.
-- Prefer being conservative (null dates + low confidence) over guessing wrong.`
-      },
-      {
-        role: 'user',
-        content: `Parse this CV/Resume and extract all information:\n\n${cvText.substring(0, 12000)}`
-      }
-    ],
-    temperature: 0.1,
-    response_format: { type: 'json_object' }
-  });
+-----------------------------------
+STRICT INSTRUCTIONS
+-----------------------------------
+- Use null instead of incorrect inference
+- Always provide arrays, even if empty
+- IDs must be stable simple identifiers like "exp_1", "exp_2", "edu_1", "edu_2"
+- DO NOT include any text outside the JSON
+- DO NOT output explanations
+- DO NOT hallucinate fields
+- DO NOT guess if date/title/company association is weak → mark low confidence and preserve snippet
+- If a section does not appear in the source, return an empty array/list
+
+YOUR OUTPUT WILL BE SHOWN IN A WIZARD WHERE USERS CONFIRM OR CORRECT:
+- name
+- job titles + companies
+- dates
+- skills
+- languages
+- education details
+
+This means conservative uncertainty is acceptable and expected.`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: model,
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        {
+          role: 'user',
+          content: `Parse this CV/Resume and extract all information:\n\n${cvText.substring(0, 12000)}`
+        }
+      ],
+      temperature: 0.1,
+      response_format: { type: 'json_object' }
+    });
 
   const content = completion.choices[0]?.message?.content;
   if (!content) {
@@ -204,76 +278,7 @@ General rules:
         messages: [
           {
             role: 'system',
-            content: `You are a CV parsing engine. Your job is to read raw CV text and output clean structured JSON. The CV can have any layout or design.
-
-The input is the FULL TEXT of a CV extracted from a PDF (line breaks preserved).
-Sometimes the PDF extraction splits lines in strange ways, or moves dates onto separate lines from company names. Do your best to associate them correctly, but **never invent information**.
-
-Your goals:
-1. Identify the candidate's name.
-2. Extract core profile info.
-3. Extract work experience with correct date ranges, as reliably as possible.
-4. Extract education.
-5. DO NOT hallucinate missing data.
-
-IMPORTANT RULES ABOUT DATES:
-- Only use dates that literally appear in the CV text.
-- Keep the original date string format (e.g. "Nov 2020", "11/2020", "November 2020").
-- If you are NOT certain which dates belong to which job, set "start_date" and "end_date" to null for that job and include the raw lines in "source_snippet" so a human can fix it.
-- Do not invent months or years that are not explicitly written.
-- Do not reorder years (e.g. 2020–2022 must stay that way, never 2022–2020).
-
-IMPORTANT RULES ABOUT NAME:
-- The candidate's full name is usually in the very top lines.
-- Ignore headers like "CV", "Curriculum Vitae", "Resume".
-- If multiple names appear, choose the one that looks like a personal name, especially near contact info (email, phone).
-- If you are unsure, pick your best guess and keep "name_confidence": "low".
-
-OUTPUT FORMAT:
-Return a single JSON object in this shape:
-
-{
-  "name": "string",
-  "name_confidence": "high" | "medium" | "low",
-  "title": "string or null",
-  "summary": "string or null",
-  "contact": {
-    "email": "string or null",
-    "phone": "string or null",
-    "location": "string or null",
-    "linkedin": "string or null"
-  },
-  "skills": ["string", ...],
-  "experience": [
-    {
-      "company": "string",
-      "role": "string or null",
-      "location": "string or null",
-      "start_date": "string or null",
-      "end_date": "string or null",
-      "date_confidence": "high" | "medium" | "low",
-      "bullets": ["string", ...],
-      "source_snippet": "short excerpt of the original lines for this job"
-    }
-  ],
-  "education": [
-    {
-      "institution": "string",
-      "degree": "string or null",
-      "field": "string or null",
-      "start_date": "string or null",
-      "end_date": "string or null",
-      "details": ["string", ...],
-      "source_snippet": "short excerpt of the original lines for this education"
-    }
-  ],
-  "raw_notes": "optional comments if something was ambiguous"
-}
-
-General rules:
-- Do not include any text outside the JSON.
-- If some sections are missing in the CV, return empty arrays for them.
-- Prefer being conservative (null dates + low confidence) over guessing wrong.`
+            content: systemPrompt  // Use same conservative prompt
           },
           {
             role: 'user',
@@ -436,7 +441,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Add compatibility layer for frontend (old format expected)
-    // New format: { skills: [], contact: { location: "..." } }
+    // New format: { skills: [], languages: [], contact: { location: "..." } }
     // Old format: { core_skills: [], locations: [] }
     const compatibleProfile = {
       ...cvProfile,
@@ -447,7 +452,17 @@ export async function POST(request: NextRequest) {
       seniority_level: cvProfile.seniority_level || "Mid",
       // Keep new format fields too for future compatibility
       skills: cvProfile.skills || cvProfile.core_skills || [],
+      languages: cvProfile.languages || [],
       contact: cvProfile.contact || {},
+      // Ensure experience and education have IDs
+      experience: (cvProfile.experience || []).map((exp: any, idx: number) => ({
+        ...exp,
+        id: exp.id || `exp_${idx + 1}`
+      })),
+      education: (cvProfile.education || []).map((edu: any, idx: number) => ({
+        ...edu,
+        id: edu.id || `edu_${idx + 1}`
+      })),
     };
 
     // Return comprehensive response
@@ -699,6 +714,12 @@ function extractBasicInfoFromText(text: string) {
     ? `${title}${core_skills.length > 0 ? ' with expertise in ' + skillsList : ''}.`
     : null;
   
+  // Extract languages (common language names)
+  const languagePatterns = /\b(English|Engelsk|Danish|Dansk|German|Tysk|German|Deutsch|French|Français|Spanish|Español|Italian|Italiano|Norwegian|Norsk|Swedish|Svenska|Dutch|Nederlands|Portuguese|Português|Chinese|Mandarin|Japanese|Korean|Arabic|Russian|Polish|Hindi|Bengali|Turkish|Vietnamese|Thai)\b/gi;
+  const languageMatches = fullText.match(languagePatterns) || [];
+  const languages = [...new Set(languageMatches.map(l => l.charAt(0).toUpperCase() + l.slice(1).toLowerCase()))];
+  console.log('✓ Found languages:', languages.join(', ') || 'None');
+  
   // Return structured data matching the new CV parsing format
   const result = {
     name,
@@ -712,6 +733,7 @@ function extractBasicInfoFromText(text: string) {
       linkedin
     },
     skills: core_skills,
+    languages: languages,
     experience: [] as any[],  // Would need more sophisticated parsing
     education: [] as any[],   // Would need more sophisticated parsing
     raw_notes: "Fallback parser used - OpenAI unavailable. Experience and education sections not extracted."
